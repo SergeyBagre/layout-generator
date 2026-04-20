@@ -90,7 +90,8 @@ h1 {
   box-shadow: 0 0 0 2px rgba(0, 152, 182, 0.15);
 }
 
-#randomBtn {
+#randomBtn,
+#downloadBtn {
   padding: 8px 20px;
   font-size: 14px;
   height: 36px;
@@ -104,12 +105,24 @@ h1 {
   transition: background 0.15s;
 }
 
-#randomBtn:hover {
+#randomBtn:hover,
+#downloadBtn:hover {
   background: #f0f0ec;
 }
 
-#randomBtn:active {
+#randomBtn:active,
+#downloadBtn:active {
   transform: scale(0.98);
+}
+
+#downloadBtn {
+  background: #0098B6;
+  color: white;
+  border-color: #0098B6;
+}
+
+#downloadBtn:hover {
+  background: #007f99;
 }
 
 .hint {

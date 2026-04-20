@@ -11,6 +11,7 @@
   const text2In = document.getElementById('text2Input');
   const canvas = document.getElementById('canvas');
   const btn = document.getElementById('randomBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
@@ -157,6 +158,15 @@
     const root = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     root.setAttribute('clip-path', 'url(#vp)');
 
+    // Background rect — so exported SVG has the canvas color baked in
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', 0);
+    bgRect.setAttribute('y', 0);
+    bgRect.setAttribute('width', W);
+    bgRect.setAttribute('height', H);
+    bgRect.setAttribute('fill', '#A4BECA');
+    root.appendChild(bgRect);
+
     const makeFilledRect = (col, row) => {
       const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       el.setAttribute('x', s1x + col * sq);
@@ -273,6 +283,40 @@
     seed = Date.now() + Math.floor(Math.random() * 999999);
     lastSeed = seed;
     generate();
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return;
+
+    // Clone so we can add namespace + clean up animation transitions
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+    // Strip any inline opacity/transition (from animation) so static SVG is fully visible
+    clone.querySelectorAll('[style]').forEach(el => {
+      el.removeAttribute('style');
+    });
+
+    // Embed Inter font so text renders correctly when opened outside browser
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
+    clone.insertBefore(style, clone.firstChild);
+
+    const serializer = new XMLSerializer();
+    const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
+
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `layout-${W}x${H}-${Date.now()}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 
   lastSeed = seed;
