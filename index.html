@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layout Generator</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="gen-wrap">
+    <h1>Layout Generator</h1>
+
+    <div class="controls">
+      <div class="ctrl-group">
+        <label>Width</label>
+        <input type="range" id="wInput" min="400" max="1920" step="10" value="1280">
+        <span class="val" id="wVal">1280</span>
+      </div>
+      <div class="ctrl-group">
+        <label>Height</label>
+        <input type="range" id="hInput" min="200" max="1080" step="10" value="720">
+        <span class="val" id="hVal">720</span>
+      </div>
+      <div class="ctrl-group">
+        <label>Filled squares</label>
+        <input type="range" id="cInput" min="2" max="20" step="1" value="8">
+        <span class="val" id="cVal">8</span>
+      </div>
+      <div class="ctrl-group">
+        <label>Text size (px)</label>
+        <input type="range" id="fsInput" min="8" max="48" step="1" value="16">
+        <span class="val" id="fsVal">16</span>
+      </div>
+      <button id="randomBtn">Random ↻</button>
+    </div>
+
+    <div class="text-controls">
+      <div class="text-group">
+        <label>Text for square 1</label>
+        <textarea id="text1Input">В реестре
+российской
+продукции</textarea>
+        <div class="hint">One line per row</div>
+      </div>
+      <div class="text-group">
+        <label>Text for square 2</label>
+        <textarea id="text2Input">AQDesk K790</textarea>
+        <div class="hint">One line per row</div>
+      </div>
+    </div>
+
+    <div class="canvas-outer">
+      <div id="canvas"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
