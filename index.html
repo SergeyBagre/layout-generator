@@ -79,7 +79,7 @@
             <label>Upload</label>
             <label class="file-btn" for="imgFile">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2v9m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 8 7.5)"/>
+                <path d="M8 10V2m0 0l-3 3m3-3l3 3M3 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span id="fileName">Choose image…</span>
             </label>
@@ -97,25 +97,16 @@
           </div>
 
           <div class="field">
-            <label>Align</label>
-            <select id="alignSelect">
-              <option value="center">Center</option>
-              <option value="top-left">Top left</option>
-              <option value="top">Top</option>
-              <option value="top-right">Top right</option>
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-              <option value="bottom-left">Bottom left</option>
-              <option value="bottom">Bottom</option>
-              <option value="bottom-right">Bottom right</option>
-            </select>
-          </div>
-
-          <div class="field">
             <label>Scale <span class="val" id="scaleVal">100 %</span></label>
             <input type="range" id="scaleInput" min="20" max="200" step="5" value="100">
           </div>
+
+          <div class="hint">Drag the image on canvas to reposition it.</div>
         </div>
+      </div>
+
+      <div class="hint-panel">
+        Drag outlined squares on the canvas — the colored chain will rebuild automatically from their new position.
       </div>
 
       <div class="actions">
