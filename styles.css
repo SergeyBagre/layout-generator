@@ -287,19 +287,16 @@ html, body {
   max-width: 100%;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
 }
 
 #canvas svg { display: block; }
 
-.draggable {
+#canvas .draggable {
   cursor: grab;
-  touch-action: none;
 }
 
-.draggable:active {
-  cursor: grabbing;
-}
-
-.draggable.dragging {
+#canvas.dragging,
+#canvas.dragging .draggable {
   cursor: grabbing;
 }

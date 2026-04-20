@@ -25,11 +25,13 @@
   let SCALE = +scaleInput.value;
   let seed = Date.now();
 
-  // Manual overrides (set when user drags)
-  let s1 = null;      // { x, y } in pixels
-  let s2 = null;      // { x, y } in pixels
-  let pat = null;     // the offset pattern used for text alignment
-  let imgOffset = { x: 0, y: 0 };  // pixel offset applied on top of auto-align
+  let s1 = null;
+  let s2 = null;
+  let pat = null;
+  let imgOffset = { x: 0, y: 0 };
+
+  // Current square size, set by generate() so drag handler always knows the latest
+  let currentSq = 0;
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -59,32 +61,31 @@
   function textPosForDelta(dx, dy) {
     const sx = Math.sign(dx) || 1;
     const sy = Math.sign(dy) || 1;
-    const ptn = offsetPatterns.find(p => p.dx === sx && p.dy === sy);
-    return ptn || offsetPatterns[0];
+    return offsetPatterns.find(p => p.dx === sx && p.dy === sy) || offsetPatterns[0];
   }
 
-  function computeImageRect(regionX, regionY, regionW, regionH, natW, natH, fit, scalePct, offset) {
+  function computeImageRect(rx, ry, rw, rh, natW, natH, fit, scalePct, offset) {
     const scale = scalePct / 100;
     let drawW, drawH;
     if (fit === 'fill') {
-      drawW = regionW * scale; drawH = regionH * scale;
+      drawW = rw * scale; drawH = rh * scale;
     } else if (fit === 'contain') {
-      const r = Math.min(regionW / natW, regionH / natH) * scale;
+      const r = Math.min(rw / natW, rh / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     } else {
-      const r = Math.max(regionW / natW, regionH / natH) * scale;
+      const r = Math.max(rw / natW, rh / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     }
-    // Default centering + user offset
-    const x = regionX + (regionW - drawW) / 2 + offset.x;
-    const y = regionY + (regionH - drawH) / 2 + offset.y;
-    return { x, y, w: drawW, h: drawH };
+    return {
+      x: rx + (rw - drawW) / 2 + offset.x,
+      y: ry + (rh - drawH) / 2 + offset.y,
+      w: drawW, h: drawH
+    };
   }
 
   function randomizeLayout() {
     const portrait = H > W;
     const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
-
     const overlapRatio = 0.4 + rng() * 0.2;
     const offsetDist = sq * (1 - overlapRatio);
     const chosenPat = pick(offsetPatterns);
@@ -102,32 +103,26 @@
 
     const s1x = Math.round(s1xMin + rng() * Math.max(0, s1xMax - s1xMin));
     const s1y = Math.round(s1yMin + rng() * Math.max(0, s1yMax - s1yMin));
-    const s2x = Math.round(s1x + dx);
-    const s2y = Math.round(s1y + dy);
 
     s1 = { x: s1x, y: s1y };
-    s2 = { x: s2x, y: s2y };
+    s2 = { x: Math.round(s1x + dx), y: Math.round(s1y + dy) };
     pat = chosenPat;
   }
 
   function generate() {
     const portrait = H > W;
     const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
+    currentSq = sq;
 
-    // If no layout yet, randomize once
     if (!s1 || !s2) randomizeLayout();
 
-    // Clamp s1 and s2 to canvas
     s1.x = clamp(s1.x, 0, W - sq);
     s1.y = clamp(s1.y, 0, H - sq);
     s2.x = clamp(s2.x, 0, W - sq);
     s2.y = clamp(s2.y, 0, H - sq);
 
-    // Update text positions based on current offset direction
     pat = textPosForDelta(s2.x - s1.x, s2.y - s1.y);
 
-    // Filled squares: anchored to s1, grid-aligned in units of sq
-    // Chain starts at s1 corner, walks toward s2 corner, continues beyond
     const s2Rect = { x: s2.x, y: s2.y, w: sq, h: sq };
     const overlapsS2 = (c, r) => {
       const x = s1.x + c * sq;
@@ -211,7 +206,6 @@
   function render(sq, filled) {
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
-    canvas.innerHTML = '';
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
@@ -231,24 +225,18 @@
 
     const hasImg = !!IMG_SRC;
     const portrait = H > W;
-    let imgRegionX, imgRegionY, imgRegionW, imgRegionH;
+    let rx, ry, rw, rh;
     if (hasImg) {
-      if (!portrait) {
-        imgRegionX = Math.floor(W / 2); imgRegionY = 0;
-        imgRegionW = W - imgRegionX; imgRegionH = H;
-      } else {
-        imgRegionX = 0; imgRegionY = Math.floor(H / 2);
-        imgRegionW = W; imgRegionH = H - imgRegionY;
-      }
+      if (!portrait) { rx = Math.floor(W / 2); ry = 0; rw = W - rx; rh = H; }
+      else { rx = 0; ry = Math.floor(H / 2); rw = W; rh = H - ry; }
       const halfClip = document.createElementNS(svgNS, 'clipPath');
       halfClip.setAttribute('id', 'imgHalf');
       const halfRect = document.createElementNS(svgNS, 'rect');
-      halfRect.setAttribute('x', imgRegionX); halfRect.setAttribute('y', imgRegionY);
-      halfRect.setAttribute('width', imgRegionW); halfRect.setAttribute('height', imgRegionH);
+      halfRect.setAttribute('x', rx); halfRect.setAttribute('y', ry);
+      halfRect.setAttribute('width', rw); halfRect.setAttribute('height', rh);
       halfClip.appendChild(halfRect);
       defs.appendChild(halfClip);
     }
-
     svg.appendChild(defs);
 
     const root = document.createElementNS(svgNS, 'g');
@@ -260,7 +248,6 @@
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
-    // LAYER 1: Filled squares (below image)
     filled.forEach(({ c, r }) => {
       const el = document.createElementNS(svgNS, 'rect');
       el.setAttribute('x', s1.x + c * sq);
@@ -271,13 +258,11 @@
       root.appendChild(el);
     });
 
-    // LAYER 2: Image (above filled squares)
-    let imgEl = null;
     if (hasImg && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
-      const rect = computeImageRect(imgRegionX, imgRegionY, imgRegionW, imgRegionH, IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE, imgOffset);
+      const rect = computeImageRect(rx, ry, rw, rh, IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE, imgOffset);
       const imgGroup = document.createElementNS(svgNS, 'g');
       imgGroup.setAttribute('clip-path', 'url(#imgHalf)');
-      imgEl = document.createElementNS(svgNS, 'image');
+      const imgEl = document.createElementNS(svgNS, 'image');
       imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'href', IMG_SRC);
       imgEl.setAttribute('href', IMG_SRC);
       imgEl.setAttribute('x', rect.x);
@@ -287,12 +272,10 @@
       imgEl.setAttribute('preserveAspectRatio', 'none');
       imgEl.classList.add('draggable');
       imgEl.dataset.role = 'image';
-      imgEl.style.cursor = 'grab';
       imgGroup.appendChild(imgEl);
       root.appendChild(imgGroup);
     }
 
-    // LAYER 3: Outlined squares (above image) — draggable
     const specialDefs = [
       { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1' },
       { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2' }
@@ -302,30 +285,22 @@
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
       g.dataset.role = role;
-      g.style.cursor = 'grab';
 
-      // Outlined rect
       const rect = document.createElementNS(svgNS, 'rect');
-      rect.setAttribute('x', sp.x);
-      rect.setAttribute('y', sp.y);
-      rect.setAttribute('width', sq);
-      rect.setAttribute('height', sq);
+      rect.setAttribute('x', sp.x); rect.setAttribute('y', sp.y);
+      rect.setAttribute('width', sq); rect.setAttribute('height', sq);
       rect.setAttribute('fill', 'transparent');
       rect.setAttribute('stroke', 'white');
       rect.setAttribute('stroke-width', 1);
       g.appendChild(rect);
 
-      // Invisible wider hit area for easier grabbing
       const hit = document.createElementNS(svgNS, 'rect');
-      hit.setAttribute('x', sp.x);
-      hit.setAttribute('y', sp.y);
-      hit.setAttribute('width', sq);
-      hit.setAttribute('height', sq);
+      hit.setAttribute('x', sp.x); hit.setAttribute('y', sp.y);
+      hit.setAttribute('width', sq); hit.setAttribute('height', sq);
       hit.setAttribute('fill', 'transparent');
       hit.setAttribute('pointer-events', 'all');
       g.appendChild(hit);
 
-      // Text
       const fs = FS;
       const lineH = fs * 1.45;
       const margin = Math.max(8, sq * 0.06);
@@ -356,76 +331,107 @@
     });
 
     svg.appendChild(root);
-    canvas.appendChild(svg);
 
-    attachDragHandlers(svg, sq, imgRegionX, imgRegionY, imgRegionW, imgRegionH);
+    // Swap SVG in place (single child of canvas)
+    const oldSvg = canvas.firstChild;
+    if (oldSvg) canvas.replaceChild(svg, oldSvg);
+    else canvas.appendChild(svg);
   }
 
-  function attachDragHandlers(svg, sq, imgRegionX, imgRegionY, imgRegionW, imgRegionH) {
-    const getSvgPoint = (evt) => {
-      const pt = svg.createSVGPoint();
-      pt.x = evt.clientX; pt.y = evt.clientY;
-      const ctm = svg.getScreenCTM();
-      if (!ctm) return { x: 0, y: 0 };
-      const inv = ctm.inverse();
-      const res = pt.matrixTransform(inv);
-      return { x: res.x, y: res.y };
-    };
+  // ============================================================
+  // Global drag handlers — attached ONCE to canvas.
+  // State lives in closure outside render(), so rebuilding the SVG
+  // during a drag never breaks the drag session.
+  // ============================================================
+  let drag = null;
+  let rafScheduled = false;
+  let pendingEvent = null;
 
-    let dragState = null;
-
-    const onPointerDown = (e) => {
-      const target = e.target.closest('.draggable');
-      if (!target) return;
-      e.preventDefault();
-      target.setPointerCapture(e.pointerId);
-      target.classList.add('dragging');
-      const pt = getSvgPoint(e);
-      const role = target.dataset.role;
-
-      if (role === 's1') {
-        dragState = { role, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, target };
-      } else if (role === 's2') {
-        dragState = { role, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y, target };
-      } else if (role === 'image') {
-        dragState = { role, startPt: pt, startOffset: { x: imgOffset.x, y: imgOffset.y }, target };
-      }
-    };
-
-    const onPointerMove = (e) => {
-      if (!dragState) return;
-      e.preventDefault();
-      const pt = getSvgPoint(e);
-
-      if (dragState.role === 's1') {
-        s1.x = clamp(pt.x - dragState.offsetX, 0, W - sq);
-        s1.y = clamp(pt.y - dragState.offsetY, 0, H - sq);
-        generate();
-      } else if (dragState.role === 's2') {
-        s2.x = clamp(pt.x - dragState.offsetX, 0, W - sq);
-        s2.y = clamp(pt.y - dragState.offsetY, 0, H - sq);
-        generate();
-      } else if (dragState.role === 'image') {
-        imgOffset.x = dragState.startOffset.x + (pt.x - dragState.startPt.x);
-        imgOffset.y = dragState.startOffset.y + (pt.y - dragState.startPt.y);
-        generate();
-      }
-    };
-
-    const onPointerUp = (e) => {
-      if (dragState && dragState.target) {
-        try { dragState.target.releasePointerCapture(e.pointerId); } catch (_) {}
-        dragState.target.classList.remove('dragging');
-      }
-      dragState = null;
-    };
-
-    svg.addEventListener('pointerdown', onPointerDown);
-    svg.addEventListener('pointermove', onPointerMove);
-    svg.addEventListener('pointerup', onPointerUp);
-    svg.addEventListener('pointercancel', onPointerUp);
+  function getSvgPointFromEvent(evt) {
+    const svg = canvas.querySelector('svg');
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const res = pt.matrixTransform(ctm.inverse());
+    return { x: res.x, y: res.y };
   }
 
+  function processPendingMove() {
+    rafScheduled = false;
+    if (!drag || !pendingEvent) return;
+    const e = pendingEvent;
+    pendingEvent = null;
+
+    const pt = getSvgPointFromEvent(e);
+    if (!pt) return;
+
+    const sq = currentSq;
+    if (drag.role === 's1') {
+      s1.x = clamp(pt.x - drag.offsetX, 0, W - sq);
+      s1.y = clamp(pt.y - drag.offsetY, 0, H - sq);
+      generate();
+    } else if (drag.role === 's2') {
+      s2.x = clamp(pt.x - drag.offsetX, 0, W - sq);
+      s2.y = clamp(pt.y - drag.offsetY, 0, H - sq);
+      generate();
+    } else if (drag.role === 'image') {
+      imgOffset = {
+        x: drag.startOffset.x + (pt.x - drag.startPt.x),
+        y: drag.startOffset.y + (pt.y - drag.startPt.y)
+      };
+      generate();
+    }
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    const target = e.target.closest('.draggable');
+    if (!target) return;
+    e.preventDefault();
+    const pt = getSvgPointFromEvent(e);
+    if (!pt) return;
+    const role = target.dataset.role;
+
+    // Capture pointer on canvas itself so subsequent moves are received
+    // even though the SVG gets rebuilt during drag
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+
+    if (role === 's1') {
+      drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
+    } else if (role === 's2') {
+      drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
+    } else if (role === 'image') {
+      drag = { role, pointerId: e.pointerId, startPt: pt, startOffset: { x: imgOffset.x, y: imgOffset.y } };
+    }
+    canvas.classList.add('dragging');
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    e.preventDefault();
+    pendingEvent = e;
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(processPendingMove);
+    }
+  });
+
+  const endDrag = (e) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    drag = null;
+    pendingEvent = null;
+    canvas.classList.remove('dragging');
+  };
+
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  // ============================================================
+  // Input handlers
+  // ============================================================
   const handleNumberInput = (input, min, max, setter) => {
     const apply = () => {
       let v = parseInt(input.value, 10);
@@ -433,14 +439,13 @@
       v = clamp(v, min, max);
       input.value = v;
       setter(v);
-      s1 = null; s2 = null; // re-randomize on canvas size change
+      s1 = null; s2 = null;
       imgOffset = { x: 0, y: 0 };
       generate();
     };
     input.addEventListener('change', apply);
     input.addEventListener('blur', apply);
   };
-
   handleNumberInput(wIn, 400, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 200, 1920, (v) => { H = v; });
 
@@ -449,7 +454,6 @@
     cVal.textContent = COUNT;
     generate();
   });
-
   fsIn.addEventListener('input', () => {
     FS = +fsIn.value;
     fsVal.textContent = FS + ' px';
@@ -457,7 +461,6 @@
   });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; generate(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; generate(); });
-
   fitSelect.addEventListener('change', () => {
     FIT = fitSelect.value;
     imgOffset = { x: 0, y: 0 };
@@ -511,7 +514,6 @@
     const clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    // Remove interactive classes/attributes from export
     clone.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
     clone.querySelectorAll('.draggable, .dragging').forEach(el => {
       el.classList.remove('draggable', 'dragging');
