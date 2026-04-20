@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,8 +34,10 @@
         <input type="range" id="fsInput" min="8" max="48" step="1" value="16">
         <span class="val" id="fsVal">16</span>
       </div>
-      <button id="randomBtn">Random ↻</button>
-      <button id="downloadBtn">Download SVG ↓</button>
+      <div class="action-btns">
+        <button id="randomBtn">Random ↻</button>
+        <button id="downloadBtn">Download SVG ↓</button>
+      </div>
     </div>
 
     <div class="text-controls">
@@ -44,13 +46,51 @@
         <textarea id="text1Input">В реестре
 российской
 продукции</textarea>
-        <div class="hint">One line per row</div>
       </div>
       <div class="text-group">
         <label>Text for square 2</label>
         <textarea id="text2Input">AQDesk K790</textarea>
-        <div class="hint">One line per row</div>
       </div>
+    </div>
+
+    <div class="image-section">
+      <h3>Image in right half</h3>
+      <div class="image-controls">
+        <div class="file-input-wrap">
+          <label>Upload</label>
+          <label class="file-input-label" for="imgFile">Choose image…</label>
+          <input type="file" id="imgFile" accept="image/*">
+          <button id="clearImgBtn">Clear</button>
+        </div>
+        <div class="ctrl-group">
+          <label>Fit</label>
+          <select id="fitSelect">
+            <option value="cover">Cover (fill, crop)</option>
+            <option value="contain">Contain (fit, letterbox)</option>
+            <option value="fill">Fill (stretch)</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>Align</label>
+          <select id="alignSelect">
+            <option value="center">Center</option>
+            <option value="top-left">Top left</option>
+            <option value="top">Top</option>
+            <option value="top-right">Top right</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="bottom-left">Bottom left</option>
+            <option value="bottom">Bottom</option>
+            <option value="bottom-right">Bottom right</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>Scale (%)</label>
+          <input type="range" id="scaleInput" min="20" max="200" step="5" value="100">
+          <span class="val" id="scaleVal">100</span>
+        </div>
+      </div>
+      <div class="hint">Image fills the right half of the canvas. Scale adjusts resolution relative to the half-canvas area.</div>
     </div>
 
     <div class="canvas-outer">

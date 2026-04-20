@@ -12,9 +12,20 @@
   const canvas = document.getElementById('canvas');
   const btn = document.getElementById('randomBtn');
   const downloadBtn = document.getElementById('downloadBtn');
+  const imgFile = document.getElementById('imgFile');
+  const clearImgBtn = document.getElementById('clearImgBtn');
+  const fitSelect = document.getElementById('fitSelect');
+  const alignSelect = document.getElementById('alignSelect');
+  const scaleInput = document.getElementById('scaleInput');
+  const scaleVal = document.getElementById('scaleVal');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
+  let IMG_SRC = null;
+  let IMG_NATURAL = { w: 0, h: 0 };
+  let FIT = fitSelect.value;
+  let ALIGN = alignSelect.value;
+  let SCALE = +scaleInput.value;
   let seed = Date.now();
 
   function rng() {
@@ -30,12 +41,35 @@
     return a;
   }
   function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
-
   const diag = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+
+  function computeImageRect(halfX, halfY, halfW, halfH, natW, natH, fit, align, scalePct) {
+    const scale = scalePct / 100;
+    let drawW, drawH;
+    if (fit === 'fill') {
+      drawW = halfW * scale;
+      drawH = halfH * scale;
+    } else if (fit === 'contain') {
+      const r = Math.min(halfW / natW, halfH / natH) * scale;
+      drawW = natW * r;
+      drawH = natH * r;
+    } else {
+      const r = Math.max(halfW / natW, halfH / natH) * scale;
+      drawW = natW * r;
+      drawH = natH * r;
+    }
+    let ax = 0.5, ay = 0.5;
+    if (align.includes('left')) ax = 0;
+    else if (align.includes('right')) ax = 1;
+    if (align.includes('top')) ay = 0;
+    else if (align.includes('bottom')) ay = 1;
+    const x = halfX + (halfW - drawW) * ax;
+    const y = halfY + (halfH - drawH) * ay;
+    return { x, y, w: drawW, h: drawH };
+  }
 
   function generate() {
     const sq = Math.floor(H / 3);
-
     const overlapRatio = 0.4 + rng() * 0.2;
     const offsetDist = sq * (1 - overlapRatio);
 
@@ -49,21 +83,22 @@
     const dx = pat.dx * offsetDist;
     const dy = pat.dy * offsetDist;
 
+    const hasImg = !!IMG_SRC;
+    const boundXMax = hasImg ? Math.floor(W / 2) : W;
+
     const s1xMin = Math.max(0, -dx);
-    const s1xMax = Math.min(W - sq, W - sq - dx);
+    const s1xMax = Math.min(boundXMax - sq, boundXMax - sq - dx);
     const s1yMin = Math.max(0, -dy);
     const s1yMax = Math.min(H - sq, H - sq - dy);
 
-    let s1x = s1xMin + rng() * Math.max(0, s1xMax - s1xMin);
-    let s1y = s1yMin + rng() * Math.max(0, s1yMax - s1yMin);
-    s1x = Math.round(s1x); s1y = Math.round(s1y);
+    let s1x = Math.round(s1xMin + rng() * Math.max(0, s1xMax - s1xMin));
+    let s1y = Math.round(s1yMin + rng() * Math.max(0, s1yMax - s1yMin));
     let s2x = Math.round(s1x + dx);
     let s2y = Math.round(s1y + dy);
 
     const s2Rect = { x: s2x, y: s2y, w: sq, h: sq };
     const overlapsS2 = (c, r) => {
-      const x = s1x + c * sq;
-      const y = s1y + r * sq;
+      const x = s1x + c * sq, y = s1y + r * sq;
       return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w ||
                y + sq <= s2Rect.y || y >= s2Rect.y + s2Rect.h);
     };
@@ -72,17 +107,14 @@
     const key = (c, r) => `${c},${r}`;
     occupied.add(key(0, 0));
 
-    const endC = Math.round(dx / sq);
-    const endR = Math.round(dy / sq);
+    const endC = Math.round(dx / sq), endR = Math.round(dy / sq);
     const endCell = (endC === 0 && endR === 0)
       ? { c: Math.sign(dx) || 1, r: Math.sign(dy) || 1 }
       : { c: endC, r: endR };
 
     const filled = [];
-
     const walkToward = (from, target, remaining) => {
-      const path = [];
-      let cur = { ...from };
+      const path = []; let cur = { ...from };
       while (remaining > 0 && (cur.c !== target.c || cur.r !== target.r)) {
         const opts = shuffle(diag.map(([a, b]) => ({ c: cur.c + a, r: cur.r + b })));
         opts.sort((a, b) => {
@@ -92,9 +124,7 @@
         });
         let chosen = null;
         for (const opt of opts) {
-          if (!occupied.has(key(opt.c, opt.r)) && !overlapsS2(opt.c, opt.r)) {
-            chosen = opt; break;
-          }
+          if (!occupied.has(key(opt.c, opt.r)) && !overlapsS2(opt.c, opt.r)) { chosen = opt; break; }
         }
         if (!chosen) break;
         occupied.add(key(chosen.c, chosen.r));
@@ -116,8 +146,7 @@
       const opts = shuffle(diag.map(([a, b]) => ({ c: current.c + a, r: current.r + b })))
         .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2(p.c, p.r));
       const inside = opts.filter(p => {
-        const x = s1x + p.c * sq;
-        const y = s1y + p.r * sq;
+        const x = s1x + p.c * sq, y = s1y + p.r * sq;
         return x + sq > 0 && x < W && y + sq > 0 && y < H;
       });
       const ordered = inside.length ? inside : opts;
@@ -139,36 +168,64 @@
     canvas.style.height = H + 'px';
     canvas.innerHTML = '';
 
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('width', W);
     svg.setAttribute('height', H);
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     svg.style.display = 'block';
 
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-    clipPath.setAttribute('id', 'vp');
-    const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    clipRect.setAttribute('x', 0); clipRect.setAttribute('y', 0);
-    clipRect.setAttribute('width', W); clipRect.setAttribute('height', H);
-    clipPath.appendChild(clipRect);
-    defs.appendChild(clipPath);
+    const defs = document.createElementNS(svgNS, 'defs');
+
+    const vpClip = document.createElementNS(svgNS, 'clipPath');
+    vpClip.setAttribute('id', 'vp');
+    const vpRect = document.createElementNS(svgNS, 'rect');
+    vpRect.setAttribute('x', 0); vpRect.setAttribute('y', 0);
+    vpRect.setAttribute('width', W); vpRect.setAttribute('height', H);
+    vpClip.appendChild(vpRect);
+    defs.appendChild(vpClip);
+
+    const halfClip = document.createElementNS(svgNS, 'clipPath');
+    halfClip.setAttribute('id', 'rightHalf');
+    const halfRect = document.createElementNS(svgNS, 'rect');
+    halfRect.setAttribute('x', Math.floor(W / 2));
+    halfRect.setAttribute('y', 0);
+    halfRect.setAttribute('width', W - Math.floor(W / 2));
+    halfRect.setAttribute('height', H);
+    halfClip.appendChild(halfRect);
+    defs.appendChild(halfClip);
+
     svg.appendChild(defs);
 
-    const root = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const root = document.createElementNS(svgNS, 'g');
     root.setAttribute('clip-path', 'url(#vp)');
 
-    // Background rect — so exported SVG has the canvas color baked in
-    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bgRect.setAttribute('x', 0);
-    bgRect.setAttribute('y', 0);
-    bgRect.setAttribute('width', W);
-    bgRect.setAttribute('height', H);
+    const bgRect = document.createElementNS(svgNS, 'rect');
+    bgRect.setAttribute('x', 0); bgRect.setAttribute('y', 0);
+    bgRect.setAttribute('width', W); bgRect.setAttribute('height', H);
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
+    if (IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
+      const halfX = Math.floor(W / 2);
+      const halfW = W - halfX;
+      const rect = computeImageRect(halfX, 0, halfW, H, IMG_NATURAL.w, IMG_NATURAL.h, FIT, ALIGN, SCALE);
+      const imgGroup = document.createElementNS(svgNS, 'g');
+      imgGroup.setAttribute('clip-path', 'url(#rightHalf)');
+      const imgEl = document.createElementNS(svgNS, 'image');
+      imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'href', IMG_SRC);
+      imgEl.setAttribute('href', IMG_SRC);
+      imgEl.setAttribute('x', rect.x);
+      imgEl.setAttribute('y', rect.y);
+      imgEl.setAttribute('width', rect.w);
+      imgEl.setAttribute('height', rect.h);
+      imgEl.setAttribute('preserveAspectRatio', 'none');
+      imgGroup.appendChild(imgEl);
+      root.appendChild(imgGroup);
+    }
+
     const makeFilledRect = (col, row) => {
-      const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const el = document.createElementNS(svgNS, 'rect');
       el.setAttribute('x', s1x + col * sq);
       el.setAttribute('y', s1y + row * sq);
       el.setAttribute('width', sq);
@@ -178,11 +235,9 @@
     };
 
     const makeOutlinedRect = (x, y) => {
-      const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      el.setAttribute('x', x);
-      el.setAttribute('y', y);
-      el.setAttribute('width', sq);
-      el.setAttribute('height', sq);
+      const el = document.createElementNS(svgNS, 'rect');
+      el.setAttribute('x', x); el.setAttribute('y', y);
+      el.setAttribute('width', sq); el.setAttribute('height', sq);
       el.setAttribute('fill', 'transparent');
       el.setAttribute('stroke', 'white');
       el.setAttribute('stroke-width', 1);
@@ -190,29 +245,21 @@
     };
 
     const makeLabel = (x, y, lines, position) => {
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const g = document.createElementNS(svgNS, 'g');
       const fs = FS;
       const lineH = fs * 1.45;
       const margin = Math.max(8, sq * 0.06);
-
       let tx, ty, anchor;
       const totalH = lines.length * lineH;
-
       switch (position) {
-        case 'top-left':
-          tx = x + margin; ty = y + margin + fs * 0.9; anchor = 'start'; break;
-        case 'top-right':
-          tx = x + sq - margin; ty = y + margin + fs * 0.9; anchor = 'end'; break;
-        case 'bottom-left':
-          tx = x + margin; ty = y + sq - totalH - margin + fs * 0.9; anchor = 'start'; break;
-        case 'bottom-right':
-          tx = x + sq - margin; ty = y + sq - totalH - margin + fs * 0.9; anchor = 'end'; break;
-        default:
-          tx = x + sq / 2; ty = y + (sq - totalH) / 2 + fs * 0.9; anchor = 'middle';
+        case 'top-left': tx = x + margin; ty = y + margin + fs * 0.9; anchor = 'start'; break;
+        case 'top-right': tx = x + sq - margin; ty = y + margin + fs * 0.9; anchor = 'end'; break;
+        case 'bottom-left': tx = x + margin; ty = y + sq - totalH - margin + fs * 0.9; anchor = 'start'; break;
+        case 'bottom-right': tx = x + sq - margin; ty = y + sq - totalH - margin + fs * 0.9; anchor = 'end'; break;
+        default: tx = x + sq / 2; ty = y + (sq - totalH) / 2 + fs * 0.9; anchor = 'middle';
       }
-
       lines.forEach((line, i) => {
-        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        const t = document.createElementNS(svgNS, 'text');
         t.setAttribute('x', tx);
         t.setAttribute('y', ty + i * lineH);
         t.setAttribute('text-anchor', anchor);
@@ -235,7 +282,7 @@
       rect.style.opacity = 0;
       rect.style.transition = `opacity 0.25s ease ${delay}ms`;
       root.appendChild(rect);
-      allEls.push({ el: rect, delay });
+      allEls.push({ el: rect });
     });
 
     const lines1 = TEXT1.split('\n');
@@ -252,13 +299,12 @@
       rect.style.opacity = 0;
       rect.style.transition = `opacity 0.3s ease ${delay}ms`;
       root.appendChild(rect);
-      allEls.push({ el: rect, delay });
-
+      allEls.push({ el: rect });
       const txt = makeLabel(x, y, lines, textPos);
       txt.style.opacity = 0;
       txt.style.transition = `opacity 0.3s ease ${delay + 80}ms`;
       root.appendChild(txt);
-      allEls.push({ el: txt, delay: delay + 80 });
+      allEls.push({ el: txt });
     });
 
     svg.appendChild(root);
@@ -275,9 +321,36 @@
 
   let lastSeed = seed;
   const rerender = () => { seed = lastSeed; generate(); };
+
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS; rerender(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; rerender(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; rerender(); });
+  fitSelect.addEventListener('change', () => { FIT = fitSelect.value; rerender(); });
+  alignSelect.addEventListener('change', () => { ALIGN = alignSelect.value; rerender(); });
+  scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE; rerender(); });
+
+  imgFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      IMG_SRC = ev.target.result;
+      const tmp = new Image();
+      tmp.onload = () => {
+        IMG_NATURAL = { w: tmp.naturalWidth, h: tmp.naturalHeight };
+        rerender();
+      };
+      tmp.src = IMG_SRC;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearImgBtn.addEventListener('click', () => {
+    IMG_SRC = null;
+    IMG_NATURAL = { w: 0, h: 0 };
+    imgFile.value = '';
+    rerender();
+  });
 
   btn.addEventListener('click', () => {
     seed = Date.now() + Math.floor(Math.random() * 999999);
@@ -288,28 +361,17 @@
   downloadBtn.addEventListener('click', () => {
     const svg = canvas.querySelector('svg');
     if (!svg) return;
-
-    // Clone so we can add namespace + clean up animation transitions
     const clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-
-    // Strip any inline opacity/transition (from animation) so static SVG is fully visible
-    clone.querySelectorAll('[style]').forEach(el => {
-      el.removeAttribute('style');
-    });
-
-    // Embed Inter font so text renders correctly when opened outside browser
+    clone.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
     clone.insertBefore(style, clone.firstChild);
-
     const serializer = new XMLSerializer();
     const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
-
     const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = `layout-${W}x${H}-${Date.now()}.svg`;
