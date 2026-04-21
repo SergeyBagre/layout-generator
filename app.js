@@ -3,8 +3,10 @@
   const hIn = document.getElementById('hInput');
   const cIn = document.getElementById('cInput');
   const fsIn = document.getElementById('fsInput');
+  const sqIn = document.getElementById('sqInput');
   const cVal = document.getElementById('cVal');
   const fsVal = document.getElementById('fsVal');
+  const sqVal = document.getElementById('sqVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
   const canvas = document.getElementById('canvas');
@@ -19,8 +21,10 @@
   const footerSize = document.getElementById('footerSize');
   const footerCount = document.getElementById('footerCount');
   const footerOrient = document.getElementById('footerOrient');
+  const footerSq = document.getElementById('footerSq');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
+  let SQ_USER = +sqIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
   let IMG_SRC = null;
   let IMG_NATURAL = { w: 0, h: 0 };
@@ -31,10 +35,7 @@
   let s1 = null;
   let s2 = null;
   let pat = null;
-
-  // Image position stored as top-left pixel coordinate, can be anywhere
   let imgPos = null;
-
   let currentSq = 0;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
@@ -69,24 +70,27 @@
 
   function computeImageSize(natW, natH, fit, scalePct) {
     const scale = scalePct / 100;
-    const refW = W, refH = H;
     let drawW, drawH;
     if (fit === 'fill') {
-      drawW = refW * scale; drawH = refH * scale;
+      drawW = W * scale; drawH = H * scale;
     } else if (fit === 'cover') {
-      const r = Math.max(refW / natW, refH / natH) * scale;
+      const r = Math.max(W / natW, H / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     } else {
-      // contain
-      const r = Math.min(refW / natW, refH / natH) * scale;
+      const r = Math.min(W / natW, H / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     }
     return { w: drawW, h: drawH };
   }
 
+  function currentSquareSize() {
+    // User-defined square size, clamped so 2 squares fit in min dimension
+    const maxSq = Math.floor(Math.min(W, H) * 0.8);
+    return Math.min(SQ_USER, maxSq);
+  }
+
   function randomizeSpecials() {
-    const portrait = H > W;
-    const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
+    const sq = currentSquareSize();
     const overlapRatio = 0.4 + rng() * 0.2;
     const offsetDist = sq * (1 - overlapRatio);
     const chosenPat = pick(offsetPatterns);
@@ -106,8 +110,7 @@
   }
 
   function generate() {
-    const portrait = H > W;
-    const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
+    const sq = currentSquareSize();
     currentSq = sq;
 
     if (!s1 || !s2) randomizeSpecials();
@@ -119,8 +122,14 @@
 
     pat = textPosForDelta(s2.x - s1.x, s2.y - s1.y);
 
+    // Build filled chain on a grid anchored to s1.
+    // The chain starts from ALL FOUR corners of s1 (diagonal neighbours),
+    // then expands as a free random diagonal walk. Each new square grows
+    // from any corner of any already-placed filled square, in any direction.
+    // s2 is just an obstacle (no need to reach it).
+
     const s2Rect = { x: s2.x, y: s2.y, w: sq, h: sq };
-    const overlapsS2 = (c, r) => {
+    const overlapsS2Cell = (c, r) => {
       const x = s1.x + c * sq;
       const y = s1.y + r * sq;
       return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w ||
@@ -129,71 +138,53 @@
 
     const occupied = new Set();
     const key = (c, r) => `${c},${r}`;
-    occupied.add(key(0, 0));
-
-    const deltaX = s2.x - s1.x;
-    const deltaY = s2.y - s1.y;
-    const endC = Math.round(deltaX / sq);
-    const endR = Math.round(deltaY / sq);
-    const endCell = (endC === 0 && endR === 0)
-      ? { c: Math.sign(deltaX) || 1, r: Math.sign(deltaY) || 1 }
-      : { c: endC, r: endR };
+    occupied.add(key(0, 0)); // s1 occupies origin
 
     const filled = [];
 
-    const walkToward = (from, target, remaining) => {
-      const path = [];
-      let cur = { ...from };
-      while (remaining > 0 && (cur.c !== target.c || cur.r !== target.r)) {
-        const opts = shuffle(diag.map(([a, b]) => ({ c: cur.c + a, r: cur.r + b })));
-        opts.sort((a, b) => {
-          const da = Math.abs(a.c - target.c) + Math.abs(a.r - target.r);
-          const db = Math.abs(b.c - target.c) + Math.abs(b.r - target.r);
-          return da - db;
-        });
-        let chosen = null;
-        for (const opt of opts) {
-          if (!occupied.has(key(opt.c, opt.r)) && !overlapsS2(opt.c, opt.r)) {
-            chosen = opt; break;
-          }
-        }
-        if (!chosen) break;
-        occupied.add(key(chosen.c, chosen.r));
-        path.push(chosen);
-        cur = chosen;
-        remaining--;
-        if (chosen.c === target.c && chosen.r === target.r) break;
-      }
-      return { path, cur, remaining };
-    };
+    // First square: random corner of s1
+    const firstCandidates = shuffle(diag.map(([dc, dr]) => ({ c: dc, r: dr })))
+      .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
 
-    let budget = COUNT;
-    const { path: path1, cur: afterWalk, remaining } = walkToward({ c: 0, r: 0 }, endCell, budget);
-    filled.push(...path1);
-    budget = remaining;
-    let current = afterWalk;
+    if (firstCandidates.length > 0) {
+      const first = firstCandidates[0];
+      occupied.add(key(first.c, first.r));
+      filled.push(first);
+    }
 
-    while (budget > 0) {
-      const opts = shuffle(diag.map(([a, b]) => ({ c: current.c + a, r: current.r + b })))
-        .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2(p.c, p.r));
-      const inside = opts.filter(p => {
-        const x = s1.x + p.c * sq;
-        const y = s1.y + p.r * sq;
-        return x + sq > 0 && x < W && y + sq > 0 && y < H;
-      });
-      const ordered = inside.length ? inside : opts;
-      if (!ordered.length) {
-        if (filled.length > 1) {
-          current = filled[Math.floor(rng() * filled.length)];
-          continue;
+    // Grow: pick a random already-placed filled square, try a random corner
+    let attempts = 0;
+    const maxAttempts = COUNT * 50;
+    while (filled.length < COUNT && attempts < maxAttempts) {
+      attempts++;
+      // Pick random "anchor" — ANY already-placed filled square
+      const anchor = filled[Math.floor(rng() * filled.length)];
+      // Pick random corner direction
+      const dir = pick(diag);
+      const nc = anchor.c + dir[0];
+      const nr = anchor.r + dir[1];
+
+      if (occupied.has(key(nc, nr))) continue;
+      if (overlapsS2Cell(nc, nr)) continue;
+
+      occupied.add(key(nc, nr));
+      filled.push({ c: nc, r: nr });
+    }
+
+    // Fallback: if random walk filled too few (highly occluded space), try breadth-first fill
+    if (filled.length < COUNT) {
+      const queue = filled.slice();
+      while (filled.length < COUNT && queue.length > 0) {
+        const anchor = queue.shift();
+        const candidates = shuffle(diag.map(([dc, dr]) => ({ c: anchor.c + dc, r: anchor.r + dr })))
+          .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+        for (const cand of candidates) {
+          if (filled.length >= COUNT) break;
+          occupied.add(key(cand.c, cand.r));
+          filled.push(cand);
+          queue.push(cand);
         }
-        break;
       }
-      const chosen = ordered[0];
-      occupied.add(key(chosen.c, chosen.r));
-      filled.push(chosen);
-      current = chosen;
-      budget--;
     }
 
     render(sq, filled);
@@ -203,6 +194,7 @@
   function updateFooter() {
     if (footerSize) footerSize.textContent = W + ' × ' + H;
     if (footerCount) footerCount.textContent = COUNT;
+    if (footerSq) footerSq.textContent = currentSq + ' px';
     if (footerOrient) footerOrient.textContent = H > W ? 'Portrait' : (H === W ? 'Square' : 'Landscape');
   }
 
@@ -235,7 +227,6 @@
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
-    // Layer 1: Filled squares
     filled.forEach(({ c, r }) => {
       const el = document.createElementNS(svgNS, 'rect');
       el.setAttribute('x', s1.x + c * sq);
@@ -246,29 +237,20 @@
       root.appendChild(el);
     });
 
-    // Layer 2: Image (above filled, can be anywhere on canvas, clipped by canvas viewport only)
     if (IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
       const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
-      // Default position: center of canvas if not yet set
-      if (!imgPos) {
-        imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
-      }
+      if (!imgPos) imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
       const imgEl = document.createElementNS(svgNS, 'image');
-      imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'href', IMG_SRC);
       imgEl.setAttribute('href', IMG_SRC);
-      imgEl.setAttribute('x', imgPos.x);
-      imgEl.setAttribute('y', imgPos.y);
-      imgEl.setAttribute('width', size.w);
-      imgEl.setAttribute('height', size.h);
+      imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', IMG_SRC);
+      imgEl.setAttribute('x', imgPos.x); imgEl.setAttribute('y', imgPos.y);
+      imgEl.setAttribute('width', size.w); imgEl.setAttribute('height', size.h);
       imgEl.setAttribute('preserveAspectRatio', 'none');
       imgEl.classList.add('draggable');
       imgEl.dataset.role = 'image';
-      imgEl.dataset.sizeW = size.w;
-      imgEl.dataset.sizeH = size.h;
       root.appendChild(imgEl);
     }
 
-    // Layer 3: Outlined squares (above image)
     const specialDefs = [
       { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1' },
       { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2' }
@@ -277,7 +259,6 @@
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
       g.dataset.role = role;
-
       const rect = document.createElementNS(svgNS, 'rect');
       rect.setAttribute('x', sp.x); rect.setAttribute('y', sp.y);
       rect.setAttribute('width', sq); rect.setAttribute('height', sq);
@@ -285,7 +266,6 @@
       rect.setAttribute('stroke', 'white');
       rect.setAttribute('stroke-width', 1);
       g.appendChild(rect);
-
       const hit = document.createElementNS(svgNS, 'rect');
       hit.setAttribute('x', sp.x); hit.setAttribute('y', sp.y);
       hit.setAttribute('width', sq); hit.setAttribute('height', sq);
@@ -327,7 +307,6 @@
     else canvas.appendChild(svg);
   }
 
-  // Drag state persists outside render
   let drag = null;
   let rafScheduled = false;
   let pendingEvent = null;
@@ -360,10 +339,7 @@
       s2.y = clamp(pt.y - drag.offsetY, 0, H - sq);
       generate();
     } else if (drag.role === 'image') {
-      imgPos = {
-        x: pt.x - drag.offsetX,
-        y: pt.y - drag.offsetY
-      };
+      imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY };
       generate();
     }
   }
@@ -376,13 +352,9 @@
     if (!pt) return;
     const role = target.dataset.role;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    if (role === 's1') {
-      drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
-    } else if (role === 's2') {
-      drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
-    } else if (role === 'image') {
-      drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
-    }
+    if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
+    else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
+    else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
     canvas.classList.add('dragging');
   });
 
@@ -406,7 +378,6 @@
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // Input handlers
   const handleNumberInput = (input, min, max, setter) => {
     const apply = () => {
       let v = parseInt(input.value, 10);
@@ -424,6 +395,13 @@
   handleNumberInput(wIn, 400, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 200, 1920, (v) => { H = v; });
 
+  sqIn.addEventListener('input', () => {
+    SQ_USER = +sqIn.value;
+    sqVal.textContent = SQ_USER + ' px';
+    // Keep outlined squares roughly in place but re-derive the chain
+    generate();
+  });
+
   cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; generate(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; generate(); });
@@ -431,13 +409,12 @@
 
   fitSelect.addEventListener('change', () => {
     FIT = fitSelect.value;
-    imgPos = null; // recenter when fit changes
+    imgPos = null;
     generate();
   });
   scaleInput.addEventListener('input', () => {
     SCALE = +scaleInput.value;
     scaleVal.textContent = SCALE + ' %';
-    // Preserve user-dragged position; user can drag again if scale pushes it off
     generate();
   });
 
@@ -468,7 +445,6 @@
     generate();
   });
 
-  // RANDOM: keep s1, s2, image where user placed them. Only reshuffle the filled chain.
   btn.addEventListener('click', () => {
     seed = Date.now() + Math.floor(Math.random() * 999999);
     generate();
@@ -478,24 +454,40 @@
     const svg = canvas.querySelector('svg');
     if (!svg) return;
     const clone = svg.cloneNode(true);
+
+    // Ensure both namespace declarations on root (critical for Figma/Illustrator)
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+    // Strip interactive artifacts
     clone.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
     clone.querySelectorAll('.draggable, .dragging').forEach(el => {
       el.classList.remove('draggable', 'dragging');
     });
-    clone.querySelectorAll('[data-role], [data-size-w], [data-size-h]').forEach(el => {
-      el.removeAttribute('data-role');
-      el.removeAttribute('data-size-w');
-      el.removeAttribute('data-size-h');
+    clone.querySelectorAll('[data-role]').forEach(el => el.removeAttribute('data-role'));
+
+    // Guarantee every <image> carries a base64 data URL on BOTH href and xlink:href.
+    // If the source is a URL (shouldn't happen here since we always store data URLs,
+    // but as a safeguard), skip rewriting.
+    const images = clone.querySelectorAll('image');
+    images.forEach((img) => {
+      const hrefData = img.getAttribute('href') || img.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
+      if (hrefData.startsWith('data:')) {
+        img.setAttribute('href', hrefData);
+        img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', hrefData);
+      }
     });
+
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
     clone.insertBefore(style, clone.firstChild);
+
     const serializer = new XMLSerializer();
     const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
+
     const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `layout-${W}x${H}-${Date.now()}.svg`;
@@ -506,5 +498,6 @@
   fsVal.textContent = FS + ' px';
   cVal.textContent = COUNT;
   scaleVal.textContent = SCALE + ' %';
+  sqVal.textContent = SQ_USER + ' px';
   generate();
 })();

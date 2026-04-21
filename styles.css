@@ -265,16 +265,14 @@ html, body {
 
 .main-area {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
   min-width: 0;
   min-height: 0;
 }
 
-.canvas-outer {
+.canvas-wrap {
+  position: relative;
   width: 100%;
   max-width: 100%;
-  overflow: auto;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -296,46 +294,45 @@ html, body {
 #canvas.dragging,
 #canvas.dragging .draggable { cursor: grabbing; }
 
-.footer-panel {
-  background: #111;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  padding: 18px 22px;
+.overlay-footer {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  background: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 20px;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.footer-inner {
+.overlay-inner {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 28px;
   flex-wrap: wrap;
 }
 
-.footer-col {
+.overlay-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
-.footer-label {
-  font-size: 11px;
+.overlay-label {
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.5);
 }
 
-.footer-value {
-  font-size: 14px;
+.overlay-value {
+  font-size: 13px;
   font-weight: 500;
   color: #fff;
-}
-
-.footer-hint-col {
-  margin-left: auto;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  flex-direction: row;
-  align-items: center;
-  gap: 0;
 }
