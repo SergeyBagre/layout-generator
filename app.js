@@ -53,6 +53,10 @@
 
   let s1 = null, s2 = null, pat = null, imgPos = null;
   let currentSq = 0;
+  // null = follow auto (pat), otherwise an override corner for that square
+  let text1CornerOverride = null;
+  let text2CornerOverride = null;
+  const cornerCycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
@@ -256,13 +260,19 @@
       const margin = Math.max(8, sq * 0.06);
       let tx, ty, anchor;
       const totalH = lines.length * lineH;
-      switch (textPos) {
+      const override = role === 's1' ? text1CornerOverride : text2CornerOverride;
+      const effectivePos = override || textPos;
+      switch (effectivePos) {
         case 'top-left': tx = sp.x + margin; ty = sp.y + margin + fs * 0.9; anchor = 'start'; break;
         case 'top-right': tx = sp.x + sq - margin; ty = sp.y + margin + fs * 0.9; anchor = 'end'; break;
         case 'bottom-left': tx = sp.x + margin; ty = sp.y + sq - totalH - margin + fs * 0.9; anchor = 'start'; break;
         case 'bottom-right': tx = sp.x + sq - margin; ty = sp.y + sq - totalH - margin + fs * 0.9; anchor = 'end'; break;
         default: tx = sp.x + sq / 2; ty = sp.y + (sq - totalH) / 2 + fs * 0.9; anchor = 'middle';
       }
+      // Text group — clickable to rotate corner
+      const textG = document.createElementNS(svgNS, 'g');
+      textG.dataset.textRole = role;
+      textG.style.cursor = 'pointer';
       lines.forEach((line, i) => {
         const t = document.createElementNS(svgNS, 'text');
         t.setAttribute('x', tx);
@@ -272,10 +282,10 @@
         t.setAttribute('font-size', fs);
         t.setAttribute('font-family', 'Inter, sans-serif');
         t.setAttribute('font-weight', '400');
-        t.setAttribute('pointer-events', 'none');
         t.textContent = line;
-        g.appendChild(t);
+        textG.appendChild(t);
       });
+      g.appendChild(textG);
       root.appendChild(g);
 
       // Random button INSIDE square 1 (lives with it, gets omitted on export)
@@ -368,18 +378,23 @@
       e.preventDefault();
       e.stopPropagation();
       seed = Date.now() + Math.floor(Math.random() * 999999);
+      text1CornerOverride = null; text2CornerOverride = null;
       generate();
       return;
     }
+    // Detect click on the text group (for corner rotation)
+    const textTarget = e.target.closest('[data-text-role]');
+    const textRole = textTarget ? textTarget.dataset.textRole : null;
+
     const target = e.target.closest('.draggable');
     if (!target) return;
     e.preventDefault();
     const pt = getSvgPointFromEvent(e); if (!pt) return;
     const role = target.dataset.role;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
-    else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
-    else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
+    if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, textRole, moved: false };
+    else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y, textRole, moved: false };
+    else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y, moved: false };
     canvas.classList.add('dragging');
   });
   canvas.addEventListener('pointermove', (e) => {
@@ -391,6 +406,17 @@
   const endDrag = (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    // If it was a click (no drag movement) on the text group → rotate corner
+    if (!drag.moved && drag.textRole) {
+      const currentCorner = drag.textRole === 's1'
+        ? (text1CornerOverride || pat.text1)
+        : (text2CornerOverride || pat.text2);
+      const idx = cornerCycle.indexOf(currentCorner);
+      const next = cornerCycle[(idx + 1) % cornerCycle.length];
+      if (drag.textRole === 's1') text1CornerOverride = next;
+      else text2CornerOverride = next;
+      redraw();
+    }
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
   };
@@ -447,6 +473,7 @@
       v = clamp(v, min, max);
       input.value = v; setter(v);
       s1 = null; s2 = null;
+      text1CornerOverride = null; text2CornerOverride = null;
       imgPos = null;
       generate();
     };
@@ -456,8 +483,8 @@
   handleNumberInput(wIn, 300, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 300, 1080, (v) => { H = v; });
 
-  sqIn.addEventListener('input', () => { SQ_USER = +sqIn.value; sqVal.textContent = SQ_USER + ' px'; generate(); });
-  cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
+  sqIn.addEventListener('input', () => { SQ_USER = +sqIn.value; sqVal.textContent = SQ_USER + ' px'; text1CornerOverride = null; text2CornerOverride = null; generate(); });
+  cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; text1CornerOverride = null; text2CornerOverride = null; generate(); });
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
@@ -499,9 +526,10 @@
     clone.querySelectorAll('.draggable, .dragging, .random-btn').forEach(el => {
       el.classList.remove('draggable', 'dragging', 'random-btn');
     });
-    clone.querySelectorAll('[data-role], [data-export]').forEach(el => {
+    clone.querySelectorAll('[data-role], [data-export], [data-text-role]').forEach(el => {
       el.removeAttribute('data-role');
       el.removeAttribute('data-export');
+      el.removeAttribute('data-text-role');
     });
     const images = clone.querySelectorAll('image');
     images.forEach((img) => {
