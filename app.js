@@ -12,14 +12,9 @@
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
-  const titleLhIn = document.getElementById('titleLhInput');
-  const titleLhVal = document.getElementById('titleLhVal');
-  const titleLsIn = document.getElementById('titleLsInput');
-  const titleLsVal = document.getElementById('titleLsVal');
-  const titleLsAuto = document.getElementById('titleLsAuto');
   const canvas = document.getElementById('canvas');
-  const btn = document.getElementById('randomBtn');
   const downloadBtn = document.getElementById('downloadBtn');
+  const exportJpgBtn = document.getElementById('exportJpgBtn');
   const imgFile = document.getElementById('imgFile');
   const fileName = document.getElementById('fileName');
   const clearImgBtn = document.getElementById('clearImgBtn');
@@ -32,11 +27,21 @@
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
-  let TITLE_LH = +titleLhIn.value;
-  let TITLE_LS = +titleLsIn.value; // percent
-  let TITLE_LS_AUTO = titleLsAuto.checked;
 
-  // Title position in pixels — user can drag; default 100, 100
+  // Fixed letter-spacing: -1%
+  const TITLE_LS_PERCENT = -1;
+
+  // Line-height linked to font size. Rule: at FS=97 → LH=89 (ratio ≈ 0.918).
+  // Use the same ratio for all sizes, clamped to readable range [1.0, 1.4].
+  function titleLineHeight(fs) {
+    const ratio = 89 / 97; // ≈ 0.9175
+    // But "text must be readable, not too tight, not too loose" → clamp ratio 1.0 .. 1.25
+    const rawLh = fs * ratio;
+    const minLh = fs * 1.02;
+    const maxLh = fs * 1.25;
+    return Math.round(Math.max(minLh, Math.min(maxLh, rawLh)));
+  }
+
   let titlePos = { x: 100, y: 100 };
 
   let IMG_SRC = null;
@@ -45,54 +50,32 @@
   let SCALE = +scaleInput.value;
   let seed = Date.now();
 
-  let s1 = null;
-  let s2 = null;
-  let pat = null;
-  let imgPos = null;
+  let s1 = null, s2 = null, pat = null, imgPos = null;
   let currentSq = 0;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-  function rng() {
-    seed = (seed * 1664525 + 1013904223) & 0xffffffff;
-    return (seed >>> 0) / 0xffffffff;
-  }
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
+  function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
+  function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
 
   const diag = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
-
   const offsetPatterns = [
     { dx: 1, dy: 1, text1: 'top-right', text2: 'bottom-left' },
     { dx: -1, dy: 1, text1: 'top-left', text2: 'bottom-right' },
     { dx: 1, dy: -1, text1: 'bottom-right', text2: 'top-left' },
     { dx: -1, dy: -1, text1: 'bottom-left', text2: 'top-right' },
   ];
-
   function textPosForDelta(dx, dy) {
-    const sx = Math.sign(dx) || 1;
-    const sy = Math.sign(dy) || 1;
+    const sx = Math.sign(dx) || 1, sy = Math.sign(dy) || 1;
     return offsetPatterns.find(p => p.dx === sx && p.dy === sy) || offsetPatterns[0];
   }
 
   function computeImageSize(natW, natH, fit, scalePct) {
     const scale = scalePct / 100;
     let drawW, drawH;
-    if (fit === 'fill') {
-      drawW = W * scale; drawH = H * scale;
-    } else if (fit === 'cover') {
-      const r = Math.max(W / natW, H / natH) * scale;
-      drawW = natW * r; drawH = natH * r;
-    } else {
-      const r = Math.min(W / natW, H / natH) * scale;
-      drawW = natW * r; drawH = natH * r;
-    }
+    if (fit === 'fill') { drawW = W * scale; drawH = H * scale; }
+    else if (fit === 'cover') { const r = Math.max(W / natW, H / natH) * scale; drawW = natW * r; drawH = natH * r; }
+    else { const r = Math.min(W / natW, H / natH) * scale; drawW = natW * r; drawH = natH * r; }
     return { w: drawW, h: drawH };
   }
 
@@ -106,14 +89,9 @@
     const overlapRatio = 0.4 + rng() * 0.2;
     const offsetDist = sq * (1 - overlapRatio);
     const chosenPat = pick(offsetPatterns);
-    const dx = chosenPat.dx * offsetDist;
-    const dy = chosenPat.dy * offsetDist;
-
-    const s1xMin = Math.max(0, -dx);
-    const s1xMax = Math.min(W - sq, W - sq - dx);
-    const s1yMin = Math.max(0, -dy);
-    const s1yMax = Math.min(H - sq, H - sq - dy);
-
+    const dx = chosenPat.dx * offsetDist, dy = chosenPat.dy * offsetDist;
+    const s1xMin = Math.max(0, -dx), s1xMax = Math.min(W - sq, W - sq - dx);
+    const s1yMin = Math.max(0, -dy), s1yMax = Math.min(H - sq, H - sq - dy);
     const s1x = Math.round(s1xMin + rng() * Math.max(0, s1xMax - s1xMin));
     const s1y = Math.round(s1yMin + rng() * Math.max(0, s1yMax - s1yMin));
     s1 = { x: s1x, y: s1y };
@@ -124,33 +102,24 @@
   function generate() {
     const sq = currentSquareSize();
     currentSq = sq;
-
     if (!s1 || !s2) randomizeSpecials();
-
-    s1.x = clamp(s1.x, 0, W - sq);
-    s1.y = clamp(s1.y, 0, H - sq);
-    s2.x = clamp(s2.x, 0, W - sq);
-    s2.y = clamp(s2.y, 0, H - sq);
-
+    s1.x = clamp(s1.x, 0, W - sq); s1.y = clamp(s1.y, 0, H - sq);
+    s2.x = clamp(s2.x, 0, W - sq); s2.y = clamp(s2.y, 0, H - sq);
     pat = textPosForDelta(s2.x - s1.x, s2.y - s1.y);
 
     const s2Rect = { x: s2.x, y: s2.y, w: sq, h: sq };
     const overlapsS2Cell = (c, r) => {
-      const x = s1.x + c * sq;
-      const y = s1.y + r * sq;
-      return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w ||
-               y + sq <= s2Rect.y || y >= s2Rect.y + s2Rect.h);
+      const x = s1.x + c * sq, y = s1.y + r * sq;
+      return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w || y + sq <= s2Rect.y || y >= s2Rect.y + s2Rect.h);
     };
 
     const occupied = new Set();
     const key = (c, r) => `${c},${r}`;
     occupied.add(key(0, 0));
-
     const filled = [];
 
     const firstCandidates = shuffle(diag.map(([dc, dr]) => ({ c: dc, r: dr })))
       .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
-
     if (firstCandidates.length > 0) {
       const first = firstCandidates[0];
       occupied.add(key(first.c, first.r));
@@ -163,8 +132,7 @@
       attempts++;
       const anchor = filled[Math.floor(rng() * filled.length)];
       const dir = pick(diag);
-      const nc = anchor.c + dir[0];
-      const nr = anchor.r + dir[1];
+      const nc = anchor.c + dir[0], nr = anchor.r + dir[1];
       if (occupied.has(key(nc, nr))) continue;
       if (overlapsS2Cell(nc, nr)) continue;
       occupied.add(key(nc, nr));
@@ -185,7 +153,6 @@
         }
       }
     }
-
     render(sq, filled);
   }
 
@@ -218,7 +185,6 @@
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
-    // Layer 1: filled squares
     filled.forEach(({ c, r }) => {
       const el = document.createElementNS(svgNS, 'rect');
       el.setAttribute('x', s1.x + c * sq);
@@ -229,7 +195,6 @@
       root.appendChild(el);
     });
 
-    // Layer 2: image
     if (IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
       const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
       if (!imgPos) imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
@@ -244,12 +209,11 @@
       root.appendChild(imgEl);
     }
 
-    // Layer 3: outlined squares
     const specialDefs = [
-      { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1' },
-      { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2' }
+      { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true },
+      { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false }
     ];
-    specialDefs.forEach(({ sp, lines, textPos, role }) => {
+    specialDefs.forEach(({ sp, lines, textPos, role, isFirst }) => {
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
       g.dataset.role = role;
@@ -293,10 +257,77 @@
         g.appendChild(t);
       });
       root.appendChild(g);
+
+      // Random button INSIDE square 1 (lives with it, gets omitted on export)
+      if (isFirst) {
+        const btnSize = Math.max(28, Math.min(48, sq * 0.22));
+        const bx = sp.x + sq / 2;
+        const by = sp.y + sq / 2;
+        const btnG = document.createElementNS(svgNS, 'g');
+        btnG.classList.add('random-btn');
+        btnG.dataset.export = 'skip';
+        btnG.setAttribute('transform', `translate(${bx}, ${by})`);
+        const bg = document.createElementNS(svgNS, 'circle');
+        bg.setAttribute('cx', 0);
+        bg.setAttribute('cy', 0);
+        bg.setAttribute('r', btnSize / 2);
+        bg.setAttribute('fill', 'rgba(0, 0, 0, 0.35)');
+        bg.setAttribute('stroke', 'white');
+        bg.setAttribute('stroke-width', 1);
+        btnG.appendChild(bg);
+        // Shuffle/random arrows icon
+        const iconSize = btnSize * 0.42;
+        const icon = document.createElementNS(svgNS, 'path');
+        // Two arrows looping — scaled to iconSize
+        const s = iconSize / 16;
+        icon.setAttribute('d', `M ${-7*s} ${-3*s} L ${5*s} ${-3*s} M ${2*s} ${-6*s} L ${5*s} ${-3*s} L ${2*s} ${0*s} M ${7*s} ${3*s} L ${-5*s} ${3*s} M ${-2*s} ${0*s} L ${-5*s} ${3*s} L ${-2*s} ${6*s}`);
+        icon.setAttribute('stroke', 'white');
+        icon.setAttribute('stroke-width', 1.4);
+        icon.setAttribute('stroke-linecap', 'round');
+        icon.setAttribute('stroke-linejoin', 'round');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('pointer-events', 'none');
+        btnG.appendChild(icon);
+        btnG.style.cursor = 'pointer';
+        root.appendChild(btnG);
+      }
     });
 
-    // Layer 4: TITLE — draggable, Inter Medium
-    renderTitle(svgNS, root);
+    // Title
+    if (TITLE_TEXT.trim()) {
+      const lines = TITLE_TEXT.split('\n');
+      const g = document.createElementNS(svgNS, 'g');
+      g.classList.add('draggable');
+      g.dataset.role = 'title';
+      const lsPx = TITLE_FS * (TITLE_LS_PERCENT / 100);
+      const lh = titleLineHeight(TITLE_FS);
+      let maxLineLen = 0; lines.forEach(ln => { if (ln.length > maxLineLen) maxLineLen = ln.length; });
+      const approxW = Math.max(200, maxLineLen * TITLE_FS * 0.55);
+      const approxH = lines.length * lh;
+      const hit = document.createElementNS(svgNS, 'rect');
+      hit.setAttribute('x', titlePos.x);
+      hit.setAttribute('y', titlePos.y - TITLE_FS * 0.9);
+      hit.setAttribute('width', approxW);
+      hit.setAttribute('height', approxH + TITLE_FS * 0.2);
+      hit.setAttribute('fill', 'transparent');
+      hit.setAttribute('pointer-events', 'all');
+      g.appendChild(hit);
+      lines.forEach((line, i) => {
+        const t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('x', titlePos.x);
+        t.setAttribute('y', titlePos.y + TITLE_FS * 0.82 + i * lh);
+        t.setAttribute('text-anchor', 'start');
+        t.setAttribute('fill', 'white');
+        t.setAttribute('font-size', TITLE_FS);
+        t.setAttribute('font-family', 'Inter, sans-serif');
+        t.setAttribute('font-weight', '500');
+        t.setAttribute('letter-spacing', lsPx);
+        t.setAttribute('pointer-events', 'none');
+        t.textContent = line;
+        g.appendChild(t);
+      });
+      root.appendChild(g);
+    }
 
     svg.appendChild(root);
     const oldSvg = canvas.firstChild;
@@ -304,64 +335,12 @@
     else canvas.appendChild(svg);
   }
 
-  function renderTitle(svgNS, root) {
-    if (!TITLE_TEXT.trim()) return;
-    const lines = TITLE_TEXT.split('\n');
-    const g = document.createElementNS(svgNS, 'g');
-    g.classList.add('draggable');
-    g.dataset.role = 'title';
-
-    // letter-spacing in em = percent/100
-    // SVG uses letter-spacing in user units. Convert: ls_units = TITLE_FS * (percent/100)
-    const lsPx = TITLE_FS * (TITLE_LS / 100);
-
-    // Compute bounding box for hit area: we'll create a transparent rect behind
-    // Approximate width: widest line * FS * 0.55 (rough avg char width)
-    let maxLineLen = 0;
-    lines.forEach(ln => { if (ln.length > maxLineLen) maxLineLen = ln.length; });
-    const approxW = Math.max(200, maxLineLen * TITLE_FS * 0.55);
-    const approxH = lines.length * TITLE_LH;
-
-    // Hit/bg rect (transparent) for dragging by any part of title area
-    const hit = document.createElementNS(svgNS, 'rect');
-    hit.setAttribute('x', titlePos.x);
-    hit.setAttribute('y', titlePos.y - TITLE_FS * 0.9);
-    hit.setAttribute('width', approxW);
-    hit.setAttribute('height', approxH + TITLE_FS * 0.2);
-    hit.setAttribute('fill', 'transparent');
-    hit.setAttribute('pointer-events', 'all');
-    g.appendChild(hit);
-
-    lines.forEach((line, i) => {
-      const t = document.createElementNS(svgNS, 'text');
-      t.setAttribute('x', titlePos.x);
-      // First baseline = titlePos.y + (line-height - font-size)/2 + font-size * 0.8 approx
-      // Simpler: first baseline = titlePos.y + TITLE_FS * 0.82 (accounts for ascender)
-      // Subsequent lines advance by TITLE_LH
-      t.setAttribute('y', titlePos.y + TITLE_FS * 0.82 + i * TITLE_LH);
-      t.setAttribute('text-anchor', 'start');
-      t.setAttribute('fill', 'white');
-      t.setAttribute('font-size', TITLE_FS);
-      t.setAttribute('font-family', 'Inter, sans-serif');
-      t.setAttribute('font-weight', '500');
-      t.setAttribute('letter-spacing', lsPx);
-      t.setAttribute('pointer-events', 'none');
-      t.textContent = line;
-      g.appendChild(t);
-    });
-
-    root.appendChild(g);
-  }
-
-  // ==== Drag ====
+  // Drag
   let drag = null, rafScheduled = false, pendingEvent = null;
   function getSvgPointFromEvent(evt) {
-    const svg = canvas.querySelector('svg');
-    if (!svg) return null;
-    const pt = svg.createSVGPoint();
-    pt.x = evt.clientX; pt.y = evt.clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return null;
+    const svg = canvas.querySelector('svg'); if (!svg) return null;
+    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+    const ctm = svg.getScreenCTM(); if (!ctm) return null;
     const res = pt.matrixTransform(ctm.inverse());
     return { x: res.x, y: res.y };
   }
@@ -371,12 +350,21 @@
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
     const sq = currentSq;
-    if (drag.role === 's1') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); generate(); }
-    else if (drag.role === 's2') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); generate(); }
-    else if (drag.role === 'image') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; generate(); }
-    else if (drag.role === 'title') { titlePos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; generate(); }
+    if (drag.role === 's1') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; generate(); }
+    else if (drag.role === 's2') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; generate(); }
+    else if (drag.role === 'image') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; generate(); }
+    else if (drag.role === 'title') { titlePos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; generate(); }
   }
   canvas.addEventListener('pointerdown', (e) => {
+    // Random button has priority
+    const randomTarget = e.target.closest('.random-btn');
+    if (randomTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      seed = Date.now() + Math.floor(Math.random() * 999999);
+      generate();
+      return;
+    }
     const target = e.target.closest('.draggable');
     if (!target) return;
     e.preventDefault();
@@ -404,14 +392,55 @@
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // ==== Inputs ====
+  // Collapsible panels
+  document.querySelectorAll('.panel').forEach(panel => {
+    const header = panel.querySelector('.panel-header');
+    header.addEventListener('click', () => {
+      panel.classList.toggle('open');
+    });
+  });
+  // Open first panel by default
+  const firstPanel = document.querySelector('.panel');
+  if (firstPanel) firstPanel.classList.add('open');
+
+  // Inline edit for .val.editable values
+  document.querySelectorAll('.val.editable').forEach(val => {
+    val.addEventListener('click', () => {
+      const targetId = val.dataset.target;
+      const target = document.getElementById(targetId);
+      if (!target) return;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'val-input';
+      input.value = target.value;
+      input.min = target.min;
+      input.max = target.max;
+      input.step = target.step || 1;
+      val.replaceWith(input);
+      input.focus();
+      input.select();
+      const finish = () => {
+        let v = parseFloat(input.value);
+        if (isNaN(v)) v = parseFloat(target.value);
+        v = Math.max(+target.min, Math.min(+target.max, v));
+        target.value = v;
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        input.replaceWith(val);
+      };
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        else if (e.key === 'Escape') { input.value = target.value; input.blur(); }
+      });
+    });
+  });
+
   const handleNumberInput = (input, min, max, setter) => {
     const apply = () => {
       let v = parseInt(input.value, 10);
       if (isNaN(v)) v = min;
       v = clamp(v, min, max);
-      input.value = v;
-      setter(v);
+      input.value = v; setter(v);
       s1 = null; s2 = null;
       imgPos = null;
       generate();
@@ -428,104 +457,46 @@
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; generate(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; generate(); });
 
-  // Title controls
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; generate(); });
-  titleFsIn.addEventListener('input', () => {
-    TITLE_FS = +titleFsIn.value;
-    titleFsVal.textContent = TITLE_FS + ' px';
-    // If auto-linked, derive line-height from font size proportionally (default ratio 89/72 ≈ 1.236)
-    if (TITLE_LS_AUTO) {
-      // keep current line-height, don't auto-change; sync letter-spacing
-      syncLetterSpacingFromLineHeight();
-    }
-    generate();
-  });
-  titleLhIn.addEventListener('input', () => {
-    TITLE_LH = +titleLhIn.value;
-    titleLhVal.textContent = TITLE_LH + ' px';
-    if (TITLE_LS_AUTO) syncLetterSpacingFromLineHeight();
-    generate();
-  });
-  titleLsIn.addEventListener('input', () => {
-    TITLE_LS = +titleLsIn.value;
-    titleLsVal.textContent = formatLs(TITLE_LS);
-    // Manual edit unlinks from line-height
-    if (TITLE_LS_AUTO) {
-      TITLE_LS_AUTO = false;
-      titleLsAuto.checked = false;
-    }
-    generate();
-  });
-  titleLsAuto.addEventListener('change', () => {
-    TITLE_LS_AUTO = titleLsAuto.checked;
-    if (TITLE_LS_AUTO) {
-      syncLetterSpacingFromLineHeight();
-      generate();
-    }
-  });
-
-  function syncLetterSpacingFromLineHeight() {
-    // Rule: letter-spacing (in %) scales linearly with line-height relative to a baseline.
-    // Baseline: line-height 89 → letter-spacing −1%.
-    // When user increases line-height, tracking opens up (less negative, trending toward 0 or positive).
-    // Simple proportional mapping: ls% = -1 * (89 / lineHeight)
-    // So at LH=89 → -1, at LH=178 → -0.5, at LH=44 → -2, etc.
-    const ls = -1 * (89 / Math.max(1, TITLE_LH));
-    TITLE_LS = Math.round(ls * 10) / 10;
-    titleLsIn.value = TITLE_LS;
-    titleLsVal.textContent = formatLs(TITLE_LS);
-  }
-
-  function formatLs(v) {
-    const sign = v < 0 ? '−' : (v > 0 ? '+' : '');
-    return sign + Math.abs(v).toFixed(1).replace(/\.0$/, '') + '%';
-  }
+  titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; generate(); });
 
   fitSelect.addEventListener('change', () => { FIT = fitSelect.value; imgPos = null; generate(); });
   scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE + ' %'; generate(); });
 
   imgFile.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     fileName.textContent = file.name;
     const reader = new FileReader();
     reader.onload = (ev) => {
       IMG_SRC = ev.target.result;
       const tmp = new Image();
-      tmp.onload = () => {
-        IMG_NATURAL = { w: tmp.naturalWidth, h: tmp.naturalHeight };
-        imgPos = null;
-        generate();
-      };
+      tmp.onload = () => { IMG_NATURAL = { w: tmp.naturalWidth, h: tmp.naturalHeight }; imgPos = null; generate(); };
       tmp.src = IMG_SRC;
     };
     reader.readAsDataURL(file);
   });
-
   clearImgBtn.addEventListener('click', () => {
-    IMG_SRC = null;
-    IMG_NATURAL = { w: 0, h: 0 };
-    imgFile.value = '';
-    fileName.textContent = 'Выбрать изображение…';
-    imgPos = null;
-    generate();
+    IMG_SRC = null; IMG_NATURAL = { w: 0, h: 0 };
+    imgFile.value = ''; fileName.textContent = 'Выбрать изображение…';
+    imgPos = null; generate();
   });
 
-  btn.addEventListener('click', () => {
-    seed = Date.now() + Math.floor(Math.random() * 999999);
-    generate();
-  });
-
-  downloadBtn.addEventListener('click', () => {
+  function buildCleanSvgString() {
     const svg = canvas.querySelector('svg');
-    if (!svg) return;
+    if (!svg) return null;
     const clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    // Remove random button and any data-export="skip" elements
+    clone.querySelectorAll('[data-export="skip"]').forEach(el => el.remove());
     clone.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
-    clone.querySelectorAll('.draggable, .dragging').forEach(el => el.classList.remove('draggable', 'dragging'));
-    clone.querySelectorAll('[data-role]').forEach(el => el.removeAttribute('data-role'));
-
+    clone.querySelectorAll('.draggable, .dragging, .random-btn').forEach(el => {
+      el.classList.remove('draggable', 'dragging', 'random-btn');
+    });
+    clone.querySelectorAll('[data-role], [data-export]').forEach(el => {
+      el.removeAttribute('data-role');
+      el.removeAttribute('data-export');
+    });
     const images = clone.querySelectorAll('image');
     images.forEach((img) => {
       const hrefData = img.getAttribute('href') || img.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
@@ -534,13 +505,15 @@
         img.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', hrefData);
       }
     });
-
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
     clone.insertBefore(style, clone.firstChild);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+  }
 
-    const serializer = new XMLSerializer();
-    const svgStr = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(clone);
+  downloadBtn.addEventListener('click', () => {
+    const svgStr = buildCleanSvgString();
+    if (!svgStr) return;
     const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -550,13 +523,50 @@
     URL.revokeObjectURL(url);
   });
 
+  exportJpgBtn.addEventListener('click', async () => {
+    const svgStr = buildCleanSvgString();
+    if (!svgStr) return;
+    // Inline Inter font fetch would be complex; rely on system Inter or fallback.
+    // Strip @import from inline style (canvas loader won't wait for it anyway)
+    const cleanStr = svgStr.replace(/@import[^;]+;/g, '');
+    const svgBlob = new Blob([cleanStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+      const cnv = document.createElement('canvas');
+      cnv.width = W;
+      cnv.height = H;
+      const ctx = cnv.getContext('2d');
+      ctx.fillStyle = '#A4BECA';
+      ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(img, 0, 0, W, H);
+      cnv.toBlob((blob) => {
+        if (!blob) return;
+        const jpgUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = jpgUrl;
+        a.download = `layout-${W}x${H}-${Date.now()}.jpg`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(jpgUrl);
+      }, 'image/jpeg', 1.0);
+    } catch (err) {
+      console.error('JPG export failed:', err);
+      alert('Не удалось экспортировать в JPG.');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   fsVal.textContent = FS + ' px';
   cVal.textContent = COUNT;
   scaleVal.textContent = SCALE + ' %';
   sqVal.textContent = SQ_USER + ' px';
   titleFsVal.textContent = TITLE_FS + ' px';
-  titleLhVal.textContent = TITLE_LH + ' px';
-  titleLsVal.textContent = formatLs(TITLE_LS);
-
   generate();
 })();

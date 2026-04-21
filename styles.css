@@ -42,24 +42,41 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 18px 22px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  width: 100%;
+  padding: 18px 22px;
+  border: none;
+  background: transparent;
   color: rgba(255, 255, 255, 0.5);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
 }
 
-.panel-icon { color: rgba(255, 255, 255, 0.5); flex-shrink: 0; }
-.panel-title { line-height: 1; }
+.panel-header:hover { color: rgba(255, 255, 255, 0.7); }
+
+.panel-icon { color: inherit; flex-shrink: 0; }
+.panel-title { line-height: 1; flex: 1; }
+.panel-chevron {
+  color: inherit;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.panel.open .panel-chevron { transform: rotate(180deg); }
+.panel.open .panel-header { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 
 .panel-body {
+  display: none;
   padding: 18px 22px 22px;
-  display: flex;
   flex-direction: column;
   gap: 18px;
 }
+
+.panel.open .panel-body { display: flex; }
 
 .row-pair {
   display: grid;
@@ -80,52 +97,39 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.field label.field-check {
-  justify-content: flex-start;
-  gap: 10px;
-  cursor: pointer;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.field label.field-check input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.field label.field-check input[type="checkbox"]:checked {
-  background: #fff;
-  border-color: #fff;
-}
-
-.field label.field-check input[type="checkbox"]:checked::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 4px;
-  height: 8px;
-  border: solid #000;
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(45deg);
+  gap: 8px;
 }
 
 .field label .val {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.4);
   font-weight: 400;
+}
+
+.field label .val.editable {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.field label .val.editable:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.field label .val-input {
+  width: 60px;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  text-align: right;
 }
 
 .field input[type="number"],
@@ -182,11 +186,6 @@ html, body {
   cursor: pointer;
   margin: 0;
   padding: 0;
-}
-
-.field input[type="range"]:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .field input[type="range"]::-webkit-slider-thumb {
@@ -338,3 +337,6 @@ html, body {
 #canvas .draggable { cursor: grab; }
 #canvas.dragging,
 #canvas.dragging .draggable { cursor: grabbing; }
+
+#canvas .random-btn { cursor: pointer; }
+#canvas .random-btn:hover circle { fill: rgba(255, 255, 255, 0.15); }
