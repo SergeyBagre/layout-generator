@@ -12,6 +12,10 @@
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
+  const titlePadTopIn = document.getElementById('titlePadTopInput');
+  const titlePadTopVal = document.getElementById('titlePadTopVal');
+  const titlePadLeftIn = document.getElementById('titlePadLeftInput');
+  const titlePadLeftVal = document.getElementById('titlePadLeftVal');
   const canvas = document.getElementById('canvas');
   const downloadBtn = document.getElementById('downloadBtn');
   const exportJpgBtn = document.getElementById('exportJpgBtn');
@@ -41,7 +45,8 @@
     return Math.round(Math.max(minLh, Math.min(maxLh, rawLh)));
   }
 
-  let titlePos = { x: 100, y: 100 };
+  let TITLE_PAD_TOP = +titlePadTopIn.value;
+  let TITLE_PAD_LEFT = +titlePadLeftIn.value;
 
   let IMG_SRC = null;
   let IMG_NATURAL = { w: 0, h: 0 };
@@ -119,22 +124,26 @@
     occupied.add(key(0, 0));
     const filled = [];
 
-    // s2's approximate grid position for seeding chain from s2 corner
+    // s2's approximate grid position relative to s1
     const s2GC = Math.round((s2.x - s1.x) / sq);
     const s2GR = Math.round((s2.y - s1.y) / sq);
+    occupied.add(key(s2GC, s2GR));
 
-    // Choose randomly: grow from s1 corner or s2 corner
-    const useS2Seed = rng() > 0.5;
-    const seedC = useS2Seed ? s2GC : 0;
-    const seedR = useS2Seed ? s2GR : 0;
+    // Three modes equally likely: grow from s1 only, from s2 only, or from BOTH
+    const mode = Math.floor(rng() * 3); // 0=s1, 1=s2, 2=both
+    const seeds = [];
+    if (mode === 0 || mode === 2) seeds.push({ c: 0, r: 0 });
+    if (mode === 1 || mode === 2) seeds.push({ c: s2GC, r: s2GR });
 
-    const firstCandidates = shuffle(diag.map(([dc, dr]) => ({ c: seedC + dc, r: seedR + dr })))
-      .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
-    if (firstCandidates.length > 0) {
-      const first = firstCandidates[0];
-      occupied.add(key(first.c, first.r));
-      filled.push(first);
-    }
+    // Seed each starting point with one diagonal neighbour
+    seeds.forEach(seed => {
+      const cands = shuffle(diag.map(([dc, dr]) => ({ c: seed.c + dc, r: seed.r + dr })))
+        .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+      if (cands.length > 0) {
+        occupied.add(key(cands[0].c, cands[0].r));
+        filled.push(cands[0]);
+      }
+    });
 
     let attempts = 0;
     const maxAttempts = COUNT * 50;
@@ -322,8 +331,8 @@
       const lh = titleLineHeight(TITLE_FS);
       lines.forEach((line, i) => {
         const t = document.createElementNS(svgNS, 'text');
-        t.setAttribute('x', titlePos.x);
-        t.setAttribute('y', titlePos.y + TITLE_FS * 0.82 + i * lh);
+        t.setAttribute('x', TITLE_PAD_LEFT);
+        t.setAttribute('y', TITLE_PAD_TOP + TITLE_FS * 0.82 + i * lh);
         t.setAttribute('text-anchor', 'start');
         t.setAttribute('fill', 'white');
         t.setAttribute('font-size', TITLE_FS);
@@ -361,7 +370,6 @@
     if (drag.role === 's1') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 'image') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
-    else if (drag.role === 'title') { titlePos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
   }
   canvas.addEventListener('pointerdown', (e) => {
     // Random button has priority
@@ -382,7 +390,6 @@
     if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
     else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
     else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
-    else if (role === 'title') drag = { role, pointerId: e.pointerId, offsetX: pt.x - titlePos.x, offsetY: pt.y - titlePos.y };
     canvas.classList.add('dragging');
   });
   canvas.addEventListener('pointermove', (e) => {
@@ -467,6 +474,8 @@
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
+  titlePadTopIn.addEventListener('input', () => { TITLE_PAD_TOP = +titlePadTopIn.value; titlePadTopVal.textContent = TITLE_PAD_TOP + ' px'; redraw(); });
+  titlePadLeftIn.addEventListener('input', () => { TITLE_PAD_LEFT = +titlePadLeftIn.value; titlePadLeftVal.textContent = TITLE_PAD_LEFT + ' px'; redraw(); });
 
   fitSelect.addEventListener('change', () => { FIT = fitSelect.value; imgPos = null; redraw(); });
   scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE + ' %'; redraw(); });
@@ -576,5 +585,7 @@
   scaleVal.textContent = SCALE + ' %';
   sqVal.textContent = SQ_USER + ' px';
   titleFsVal.textContent = TITLE_FS + ' px';
+  titlePadTopVal.textContent = TITLE_PAD_TOP + ' px';
+  titlePadLeftVal.textContent = TITLE_PAD_LEFT + ' px';
   generate();
 })();
