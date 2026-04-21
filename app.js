@@ -16,6 +16,9 @@
   const fitSelect = document.getElementById('fitSelect');
   const scaleInput = document.getElementById('scaleInput');
   const scaleVal = document.getElementById('scaleVal');
+  const footerSize = document.getElementById('footerSize');
+  const footerCount = document.getElementById('footerCount');
+  const footerOrient = document.getElementById('footerOrient');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
@@ -28,11 +31,11 @@
   let s1 = null;
   let s2 = null;
   let pat = null;
-  let imgOffset = { x: 0, y: 0 };
 
-  // Current square size, set by generate() so drag handler always knows the latest
+  // Image position stored as top-left pixel coordinate, can be anywhere
+  let imgPos = null;
+
   let currentSq = 0;
-
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function rng() {
@@ -64,26 +67,24 @@
     return offsetPatterns.find(p => p.dx === sx && p.dy === sy) || offsetPatterns[0];
   }
 
-  function computeImageRect(rx, ry, rw, rh, natW, natH, fit, scalePct, offset) {
+  function computeImageSize(natW, natH, fit, scalePct) {
     const scale = scalePct / 100;
+    const refW = W, refH = H;
     let drawW, drawH;
     if (fit === 'fill') {
-      drawW = rw * scale; drawH = rh * scale;
-    } else if (fit === 'contain') {
-      const r = Math.min(rw / natW, rh / natH) * scale;
+      drawW = refW * scale; drawH = refH * scale;
+    } else if (fit === 'cover') {
+      const r = Math.max(refW / natW, refH / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     } else {
-      const r = Math.max(rw / natW, rh / natH) * scale;
+      // contain
+      const r = Math.min(refW / natW, refH / natH) * scale;
       drawW = natW * r; drawH = natH * r;
     }
-    return {
-      x: rx + (rw - drawW) / 2 + offset.x,
-      y: ry + (rh - drawH) / 2 + offset.y,
-      w: drawW, h: drawH
-    };
+    return { w: drawW, h: drawH };
   }
 
-  function randomizeLayout() {
+  function randomizeSpecials() {
     const portrait = H > W;
     const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
     const overlapRatio = 0.4 + rng() * 0.2;
@@ -92,18 +93,13 @@
     const dx = chosenPat.dx * offsetDist;
     const dy = chosenPat.dy * offsetDist;
 
-    const hasImg = !!IMG_SRC;
-    const boundXMax = hasImg && !portrait ? Math.floor(W / 2) : W;
-    const boundYMax = hasImg && portrait ? Math.floor(H / 2) : H;
-
     const s1xMin = Math.max(0, -dx);
-    const s1xMax = Math.min(boundXMax - sq, boundXMax - sq - dx);
+    const s1xMax = Math.min(W - sq, W - sq - dx);
     const s1yMin = Math.max(0, -dy);
-    const s1yMax = Math.min(boundYMax - sq, boundYMax - sq - dy);
+    const s1yMax = Math.min(H - sq, H - sq - dy);
 
     const s1x = Math.round(s1xMin + rng() * Math.max(0, s1xMax - s1xMin));
     const s1y = Math.round(s1yMin + rng() * Math.max(0, s1yMax - s1yMin));
-
     s1 = { x: s1x, y: s1y };
     s2 = { x: Math.round(s1x + dx), y: Math.round(s1y + dy) };
     pat = chosenPat;
@@ -114,7 +110,7 @@
     const sq = portrait ? Math.floor(H / 5) : Math.floor(H / 3);
     currentSq = sq;
 
-    if (!s1 || !s2) randomizeLayout();
+    if (!s1 || !s2) randomizeSpecials();
 
     s1.x = clamp(s1.x, 0, W - sq);
     s1.y = clamp(s1.y, 0, H - sq);
@@ -201,6 +197,13 @@
     }
 
     render(sq, filled);
+    updateFooter();
+  }
+
+  function updateFooter() {
+    if (footerSize) footerSize.textContent = W + ' × ' + H;
+    if (footerCount) footerCount.textContent = COUNT;
+    if (footerOrient) footerOrient.textContent = H > W ? 'Portrait' : (H === W ? 'Square' : 'Landscape');
   }
 
   function render(sq, filled) {
@@ -214,7 +217,6 @@
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
 
     const defs = document.createElementNS(svgNS, 'defs');
-
     const vpClip = document.createElementNS(svgNS, 'clipPath');
     vpClip.setAttribute('id', 'vp');
     const vpRect = document.createElementNS(svgNS, 'rect');
@@ -222,21 +224,6 @@
     vpRect.setAttribute('width', W); vpRect.setAttribute('height', H);
     vpClip.appendChild(vpRect);
     defs.appendChild(vpClip);
-
-    const hasImg = !!IMG_SRC;
-    const portrait = H > W;
-    let rx, ry, rw, rh;
-    if (hasImg) {
-      if (!portrait) { rx = Math.floor(W / 2); ry = 0; rw = W - rx; rh = H; }
-      else { rx = 0; ry = Math.floor(H / 2); rw = W; rh = H - ry; }
-      const halfClip = document.createElementNS(svgNS, 'clipPath');
-      halfClip.setAttribute('id', 'imgHalf');
-      const halfRect = document.createElementNS(svgNS, 'rect');
-      halfRect.setAttribute('x', rx); halfRect.setAttribute('y', ry);
-      halfRect.setAttribute('width', rw); halfRect.setAttribute('height', rh);
-      halfClip.appendChild(halfRect);
-      defs.appendChild(halfClip);
-    }
     svg.appendChild(defs);
 
     const root = document.createElementNS(svgNS, 'g');
@@ -248,6 +235,7 @@
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
+    // Layer 1: Filled squares
     filled.forEach(({ c, r }) => {
       const el = document.createElementNS(svgNS, 'rect');
       el.setAttribute('x', s1.x + c * sq);
@@ -258,29 +246,33 @@
       root.appendChild(el);
     });
 
-    if (hasImg && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
-      const rect = computeImageRect(rx, ry, rw, rh, IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE, imgOffset);
-      const imgGroup = document.createElementNS(svgNS, 'g');
-      imgGroup.setAttribute('clip-path', 'url(#imgHalf)');
+    // Layer 2: Image (above filled, can be anywhere on canvas, clipped by canvas viewport only)
+    if (IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
+      const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
+      // Default position: center of canvas if not yet set
+      if (!imgPos) {
+        imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
+      }
       const imgEl = document.createElementNS(svgNS, 'image');
       imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'href', IMG_SRC);
       imgEl.setAttribute('href', IMG_SRC);
-      imgEl.setAttribute('x', rect.x);
-      imgEl.setAttribute('y', rect.y);
-      imgEl.setAttribute('width', rect.w);
-      imgEl.setAttribute('height', rect.h);
+      imgEl.setAttribute('x', imgPos.x);
+      imgEl.setAttribute('y', imgPos.y);
+      imgEl.setAttribute('width', size.w);
+      imgEl.setAttribute('height', size.h);
       imgEl.setAttribute('preserveAspectRatio', 'none');
       imgEl.classList.add('draggable');
       imgEl.dataset.role = 'image';
-      imgGroup.appendChild(imgEl);
-      root.appendChild(imgGroup);
+      imgEl.dataset.sizeW = size.w;
+      imgEl.dataset.sizeH = size.h;
+      root.appendChild(imgEl);
     }
 
+    // Layer 3: Outlined squares (above image)
     const specialDefs = [
       { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1' },
       { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2' }
     ];
-
     specialDefs.forEach(({ sp, lines, textPos, role }) => {
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
@@ -326,23 +318,16 @@
         t.textContent = line;
         g.appendChild(t);
       });
-
       root.appendChild(g);
     });
 
     svg.appendChild(root);
-
-    // Swap SVG in place (single child of canvas)
     const oldSvg = canvas.firstChild;
     if (oldSvg) canvas.replaceChild(svg, oldSvg);
     else canvas.appendChild(svg);
   }
 
-  // ============================================================
-  // Global drag handlers — attached ONCE to canvas.
-  // State lives in closure outside render(), so rebuilding the SVG
-  // during a drag never breaks the drag session.
-  // ============================================================
+  // Drag state persists outside render
   let drag = null;
   let rafScheduled = false;
   let pendingEvent = null;
@@ -363,10 +348,8 @@
     if (!drag || !pendingEvent) return;
     const e = pendingEvent;
     pendingEvent = null;
-
     const pt = getSvgPointFromEvent(e);
     if (!pt) return;
-
     const sq = currentSq;
     if (drag.role === 's1') {
       s1.x = clamp(pt.x - drag.offsetX, 0, W - sq);
@@ -377,9 +360,9 @@
       s2.y = clamp(pt.y - drag.offsetY, 0, H - sq);
       generate();
     } else if (drag.role === 'image') {
-      imgOffset = {
-        x: drag.startOffset.x + (pt.x - drag.startPt.x),
-        y: drag.startOffset.y + (pt.y - drag.startPt.y)
+      imgPos = {
+        x: pt.x - drag.offsetX,
+        y: pt.y - drag.offsetY
       };
       generate();
     }
@@ -392,17 +375,13 @@
     const pt = getSvgPointFromEvent(e);
     if (!pt) return;
     const role = target.dataset.role;
-
-    // Capture pointer on canvas itself so subsequent moves are received
-    // even though the SVG gets rebuilt during drag
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-
     if (role === 's1') {
       drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
     } else if (role === 's2') {
       drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
     } else if (role === 'image') {
-      drag = { role, pointerId: e.pointerId, startPt: pt, startOffset: { x: imgOffset.x, y: imgOffset.y } };
+      drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
     }
     canvas.classList.add('dragging');
   });
@@ -418,20 +397,16 @@
   });
 
   const endDrag = (e) => {
-    if (!drag) return;
-    if (e.pointerId !== drag.pointerId) return;
+    if (!drag || e.pointerId !== drag.pointerId) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     drag = null;
     pendingEvent = null;
     canvas.classList.remove('dragging');
   };
-
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // ============================================================
   // Input handlers
-  // ============================================================
   const handleNumberInput = (input, min, max, setter) => {
     const apply = () => {
       let v = parseInt(input.value, 10);
@@ -440,7 +415,7 @@
       input.value = v;
       setter(v);
       s1 = null; s2 = null;
-      imgOffset = { x: 0, y: 0 };
+      imgPos = null;
       generate();
     };
     input.addEventListener('change', apply);
@@ -449,26 +424,20 @@
   handleNumberInput(wIn, 400, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 200, 1920, (v) => { H = v; });
 
-  cIn.addEventListener('input', () => {
-    COUNT = +cIn.value;
-    cVal.textContent = COUNT;
-    generate();
-  });
-  fsIn.addEventListener('input', () => {
-    FS = +fsIn.value;
-    fsVal.textContent = FS + ' px';
-    generate();
-  });
+  cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
+  fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; generate(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; generate(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; generate(); });
+
   fitSelect.addEventListener('change', () => {
     FIT = fitSelect.value;
-    imgOffset = { x: 0, y: 0 };
+    imgPos = null; // recenter when fit changes
     generate();
   });
   scaleInput.addEventListener('input', () => {
     SCALE = +scaleInput.value;
     scaleVal.textContent = SCALE + ' %';
+    // Preserve user-dragged position; user can drag again if scale pushes it off
     generate();
   });
 
@@ -482,8 +451,7 @@
       const tmp = new Image();
       tmp.onload = () => {
         IMG_NATURAL = { w: tmp.naturalWidth, h: tmp.naturalHeight };
-        imgOffset = { x: 0, y: 0 };
-        s1 = null; s2 = null;
+        imgPos = null;
         generate();
       };
       tmp.src = IMG_SRC;
@@ -496,15 +464,13 @@
     IMG_NATURAL = { w: 0, h: 0 };
     imgFile.value = '';
     fileName.textContent = 'Choose image…';
-    imgOffset = { x: 0, y: 0 };
-    s1 = null; s2 = null;
+    imgPos = null;
     generate();
   });
 
+  // RANDOM: keep s1, s2, image where user placed them. Only reshuffle the filled chain.
   btn.addEventListener('click', () => {
     seed = Date.now() + Math.floor(Math.random() * 999999);
-    s1 = null; s2 = null;
-    imgOffset = { x: 0, y: 0 };
     generate();
   });
 
@@ -518,7 +484,11 @@
     clone.querySelectorAll('.draggable, .dragging').forEach(el => {
       el.classList.remove('draggable', 'dragging');
     });
-    clone.querySelectorAll('[data-role]').forEach(el => el.removeAttribute('data-role'));
+    clone.querySelectorAll('[data-role], [data-size-w], [data-size-h]').forEach(el => {
+      el.removeAttribute('data-role');
+      el.removeAttribute('data-size-w');
+      el.removeAttribute('data-size-h');
+    });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
     clone.insertBefore(style, clone.firstChild);

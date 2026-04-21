@@ -263,10 +263,10 @@ html, body {
 
 .btn-primary:hover { background: rgba(255, 255, 255, 0.9); }
 
-.canvas-area {
+.main-area {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
   min-width: 0;
   min-height: 0;
 }
@@ -292,11 +292,50 @@ html, body {
 
 #canvas svg { display: block; }
 
-#canvas .draggable {
-  cursor: grab;
+#canvas .draggable { cursor: grab; }
+#canvas.dragging,
+#canvas.dragging .draggable { cursor: grabbing; }
+
+.footer-panel {
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 18px 22px;
 }
 
-#canvas.dragging,
-#canvas.dragging .draggable {
-  cursor: grabbing;
+.footer-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.footer-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.footer-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.footer-hint-col {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
 }

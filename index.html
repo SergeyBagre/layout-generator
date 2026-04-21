@@ -90,8 +90,8 @@
           <div class="field">
             <label>Fit</label>
             <select id="fitSelect">
+              <option value="contain">Contain (fit)</option>
               <option value="cover">Cover (fill, crop)</option>
-              <option value="contain">Contain (fit, letterbox)</option>
               <option value="fill">Fill (stretch)</option>
             </select>
           </div>
@@ -101,12 +101,12 @@
             <input type="range" id="scaleInput" min="20" max="200" step="5" value="100">
           </div>
 
-          <div class="hint">Drag the image on canvas to reposition it.</div>
+          <div class="hint">Drag the image on the canvas to position it anywhere.</div>
         </div>
       </div>
 
       <div class="hint-panel">
-        Drag outlined squares on the canvas — the colored chain will rebuild automatically from their new position.
+        Drag outlined squares to reposition them. Random rebuilds the colored chain from their current position.
       </div>
 
       <div class="actions">
@@ -125,10 +125,34 @@
       </div>
     </aside>
 
-    <main class="canvas-area">
+    <main class="main-area">
       <div class="canvas-outer">
         <div id="canvas"></div>
       </div>
+
+      <footer class="footer-panel">
+        <div class="footer-inner">
+          <div class="footer-col">
+            <div class="footer-label">Project</div>
+            <div class="footer-value">Layout Generator</div>
+          </div>
+          <div class="footer-col">
+            <div class="footer-label">Canvas</div>
+            <div class="footer-value" id="footerSize">1280 × 720</div>
+          </div>
+          <div class="footer-col">
+            <div class="footer-label">Filled</div>
+            <div class="footer-value" id="footerCount">8</div>
+          </div>
+          <div class="footer-col">
+            <div class="footer-label">Orientation</div>
+            <div class="footer-value" id="footerOrient">Landscape</div>
+          </div>
+          <div class="footer-col footer-hint-col">
+            Drag outlined squares or the image on the canvas
+          </div>
+        </div>
+      </footer>
     </main>
   </div>
 
