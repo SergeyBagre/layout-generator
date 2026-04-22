@@ -131,10 +131,14 @@
             <textarea id="footInput" rows="3">АО «Банк Пример», ОГРН 1027700000000, ИНН 7700000000. Генеральная лицензия Банка России №1234. Условия действительны на дату публикации. Не является публичной офертой.</textarea>
           </div>
           <div class="field">
-            <label>Размер шрифта <span class="val editable" data-target="footFsInput" data-suffix=" px" id="footFsVal">14 px</span></label>
-            <input type="range" id="footFsInput" min="8" max="40" step="1" value="14">
+            <label>Отступ (справа и снизу) <span class="val editable" data-target="footPadInput" data-suffix=" px" id="footPadVal">100 px</span></label>
+            <input type="range" id="footPadInput" min="0" max="800" step="1" value="100">
           </div>
-          <div class="hint">Сноска вертикально идёт снизу вверх справа, отступы берутся из значения заголовка (от правого и нижнего края).</div>
+          <div class="field">
+            <label>Размер шрифта <span class="val editable" data-target="footFsInput" data-suffix=" px" id="footFsVal">10 px</span></label>
+            <input type="range" id="footFsInput" min="8" max="40" step="1" value="10">
+          </div>
+          <div class="hint">Сноска вертикально идёт снизу вверх справа. Enter в поле — перенос строки. Отступ по умолчанию совпадает со значением заголовка.</div>
         </div>
       </div>
 
