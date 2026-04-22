@@ -3,10 +3,8 @@
   const hIn = document.getElementById('hInput');
   const cIn = document.getElementById('cInput');
   const fsIn = document.getElementById('fsInput');
-  const sqIn = document.getElementById('sqInput');
   const cVal = document.getElementById('cVal');
   const fsVal = document.getElementById('fsVal');
-  const sqVal = document.getElementById('sqVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
   const titleIn = document.getElementById('titleInput');
@@ -34,7 +32,6 @@
   const scaleVal = document.getElementById('scaleVal');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
-  let SQ_USER = +sqIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -87,6 +84,18 @@
   let currentSq = 0;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+  function fitCanvasToViewport() {
+    const wrap = canvas.parentElement;
+    if (!wrap) return;
+    const availW = wrap.clientWidth;
+    const availH = window.innerHeight - 48;
+    const scale = Math.min(1, availW / W, availH / H);
+    canvas.style.transform = scale < 1 ? `scale(${scale})` : '';
+    canvas.style.marginBottom = scale < 1 ? `${-H * (1 - scale)}px` : '';
+    canvas.style.marginRight = scale < 1 ? `${-W * (1 - scale)}px` : '';
+  }
+  window.addEventListener('resize', fitCanvasToViewport);
+
   function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
   function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
@@ -113,8 +122,7 @@
   }
 
   function currentSquareSize() {
-    const maxSq = Math.floor(Math.min(W, H) * 0.8);
-    return Math.min(SQ_USER, maxSq);
+    return Math.floor(Math.min(W, H) / 3);
   }
 
   function randomizeSpecials() {
@@ -211,6 +219,7 @@
   function render(sq, filled) {
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
+    fitCanvasToViewport();
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg');
@@ -563,7 +572,6 @@
   handleNumberInput(wIn, 300, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 300, 1080, (v) => { H = v; });
 
-  sqIn.addEventListener('input', () => { SQ_USER = +sqIn.value; sqVal.textContent = SQ_USER + ' px'; generate(); });
   cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
@@ -626,7 +634,7 @@
       }
     });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap'); text { font-family: 'Inter', sans-serif; }`;
+    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap'); text { font-family: 'Inter', sans-serif; font-weight: 400; } text[font-weight="600"] { font-weight: 600; }`;
     clone.insertBefore(style, clone.firstChild);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   }
@@ -646,10 +654,8 @@
   exportJpgBtn.addEventListener('click', async () => {
     const svgStr = buildCleanSvgString();
     if (!svgStr) return;
-    // Inline Inter font fetch would be complex; rely on system Inter or fallback.
-    // Strip @import from inline style (canvas loader won't wait for it anyway)
-    const cleanStr = svgStr.replace(/@import[^;]+;/g, '');
-    const svgBlob = new Blob([cleanStr], { type: 'image/svg+xml;charset=utf-8' });
+    try { await document.fonts.load('600 72px Inter'); await document.fonts.load('400 16px Inter'); } catch (_) {}
+    const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     try {
       const img = new Image();
@@ -686,7 +692,6 @@
   fsVal.textContent = FS + ' px';
   cVal.textContent = COUNT;
   scaleVal.textContent = SCALE + ' %';
-  sqVal.textContent = SQ_USER + ' px';
   titleFsVal.textContent = TITLE_FS + ' px';
   titlePadVal.textContent = TITLE_PAD + ' px';
   logoHVal.textContent = LOGO_H + ' px';

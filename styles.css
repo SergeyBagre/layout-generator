@@ -330,6 +330,7 @@ html, body {
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  transform-origin: top left;
 }
 
 #canvas svg { display: block; }
