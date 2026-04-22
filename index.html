@@ -109,6 +109,35 @@
         </div>
       </div>
 
+      <div class="panel" data-panel="footnote">
+        <button class="panel-header" type="button">
+          <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 12h10M3 8h7M3 4h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <span class="panel-title">Сноска</span>
+          <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="panel-body">
+          <div class="field">
+            <label class="field-check">
+              <input type="checkbox" id="footEnabledInput" checked>
+              Показывать сноску
+            </label>
+          </div>
+          <div class="field">
+            <label>Текст сноски</label>
+            <textarea id="footInput" rows="3">АО «Банк Пример», ОГРН 1027700000000, ИНН 7700000000. Генеральная лицензия Банка России №1234. Условия действительны на дату публикации. Не является публичной офертой.</textarea>
+          </div>
+          <div class="field">
+            <label>Размер шрифта <span class="val editable" data-target="footFsInput" data-suffix=" px" id="footFsVal">14 px</span></label>
+            <input type="range" id="footFsInput" min="8" max="40" step="1" value="14">
+          </div>
+          <div class="hint">Сноска вертикально идёт снизу вверх справа, отступы берутся из значения заголовка (от правого и нижнего края).</div>
+        </div>
+      </div>
+
       <div class="panel" data-panel="image">
         <button class="panel-header" type="button">
           <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">

@@ -17,6 +17,10 @@
   const logoHIn = document.getElementById('logoHInput');
   const logoHVal = document.getElementById('logoHVal');
   const swapIn = document.getElementById('swapInput');
+  const footEnabledIn = document.getElementById('footEnabledInput');
+  const footIn = document.getElementById('footInput');
+  const footFsIn = document.getElementById('footFsInput');
+  const footFsVal = document.getElementById('footFsVal');
   const canvas = document.getElementById('canvas');
   const downloadBtn = document.getElementById('downloadBtn');
   const exportJpgBtn = document.getElementById('exportJpgBtn');
@@ -49,6 +53,9 @@
   let TITLE_PAD = +titlePadIn.value;
   let LOGO_H = +logoHIn.value;
   let SWAP = swapIn.checked;
+  let FOOT_ENABLED = footEnabledIn.checked;
+  let FOOT_TEXT = footIn.value;
+  let FOOT_FS = +footFsIn.value;
 
   // Logo geometry (from Logo.svg): viewBox 0 0 1018 148, content extends to ~561 in x
   const LOGO_VB_W = 1018;
@@ -409,6 +416,28 @@
     if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
     if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
 
+    // Footnote — vertical, reading bottom-to-top, anchored at bottom-right
+    if (FOOT_ENABLED && FOOT_TEXT.trim()) {
+      const g = document.createElementNS(svgNS, 'g');
+      g.dataset.role = 'footnote';
+      g.setAttribute('pointer-events', 'none');
+      // Rotate -90°: text baseline runs upward along the right edge.
+      // After rotate(-90), the local x-axis points up, local y-axis points right.
+      // Place baseline at (W - TITLE_PAD), starting point at y = H - TITLE_PAD.
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('fill', 'white');
+      t.setAttribute('font-size', FOOT_FS);
+      t.setAttribute('font-family', 'Inter, sans-serif');
+      t.setAttribute('font-weight', '400');
+      t.setAttribute('text-anchor', 'start');
+      // Transform: move origin to (W - TITLE_PAD, H - TITLE_PAD), then rotate -90.
+      // After rotation, the text's x-axis goes up (negative screen-y), baseline stays put.
+      t.setAttribute('transform', `translate(${W - TITLE_PAD}, ${H - TITLE_PAD}) rotate(-90)`);
+      t.textContent = FOOT_TEXT;
+      g.appendChild(t);
+      root.appendChild(g);
+    }
+
     svg.appendChild(root);
     const oldSvg = canvas.firstChild;
     if (oldSvg) canvas.replaceChild(svg, oldSvg);
@@ -541,6 +570,10 @@
   logoHIn.addEventListener('input', () => { LOGO_H = +logoHIn.value; logoHVal.textContent = LOGO_H + ' px'; redraw(); });
   swapIn.addEventListener('change', () => { SWAP = swapIn.checked; redraw(); });
 
+  footEnabledIn.addEventListener('change', () => { FOOT_ENABLED = footEnabledIn.checked; redraw(); });
+  footIn.addEventListener('input', () => { FOOT_TEXT = footIn.value; redraw(); });
+  footFsIn.addEventListener('input', () => { FOOT_FS = +footFsIn.value; footFsVal.textContent = FOOT_FS + ' px'; redraw(); });
+
   fitSelect.addEventListener('change', () => { FIT = fitSelect.value; imgPos = null; redraw(); });
   scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE + ' %'; redraw(); });
 
@@ -587,7 +620,7 @@
       }
     });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap'); text { font-family: 'Inter', sans-serif; }`;
+    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap'); text { font-family: 'Inter', sans-serif; }`;
     clone.insertBefore(style, clone.firstChild);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   }
@@ -651,5 +684,6 @@
   titleFsVal.textContent = TITLE_FS + ' px';
   titlePadVal.textContent = TITLE_PAD + ' px';
   logoHVal.textContent = LOGO_H + ' px';
+  footFsVal.textContent = FOOT_FS + ' px';
   generate();
 })();
