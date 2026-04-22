@@ -367,6 +367,7 @@
         t.setAttribute('font-size', TITLE_FS);
         t.setAttribute('font-family', 'Inter, sans-serif');
         t.setAttribute('font-weight', '600');
+        t.setAttribute('style', 'font-weight:600;font-synthesis:none;-webkit-font-synthesis:none;');
         t.setAttribute('letter-spacing', lsPx);
         t.setAttribute('pointer-events', 'none');
         t.setAttribute('data-line-index', i);
