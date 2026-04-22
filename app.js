@@ -21,6 +21,8 @@
   const footIn = document.getElementById('footInput');
   const footFsIn = document.getElementById('footFsInput');
   const footFsVal = document.getElementById('footFsVal');
+  const footPadIn = document.getElementById('footPadInput');
+  const footPadVal = document.getElementById('footPadVal');
   const canvas = document.getElementById('canvas');
   const downloadBtn = document.getElementById('downloadBtn');
   const exportJpgBtn = document.getElementById('exportJpgBtn');
@@ -56,6 +58,7 @@
   let FOOT_ENABLED = footEnabledIn.checked;
   let FOOT_TEXT = footIn.value;
   let FOOT_FS = +footFsIn.value;
+  let FOOT_PAD = +footPadIn.value;
 
   // Logo geometry (from Logo.svg): viewBox 0 0 1018 148, content extends to ~561 in x
   const LOGO_VB_W = 1018;
@@ -416,54 +419,16 @@
     if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
     if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
 
-    // Footnote — vertical, reading top-to-bottom along the right edge.
-    // Wraps to multiple lines when text is longer than the available vertical space;
-    // additional lines stack toward the right edge (each new line sits further right).
+    // Footnote — vertical, anchored at bottom-right corner (unchanged position)
     if (FOOT_ENABLED && FOOT_TEXT.trim()) {
       const g = document.createElementNS(svgNS, 'g');
       g.dataset.role = 'footnote';
       g.setAttribute('pointer-events', 'none');
-
-      // Available length along the vertical axis (from top padding to bottom padding).
-      const availLen = Math.max(0, H - TITLE_PAD * 2);
-      // Line height for stacking columns toward the edge.
-      const footLH = Math.round(FOOT_FS * 1.3);
-
-      // Measure text width using a hidden text element appended to the live svg.
-      const measurer = document.createElementNS(svgNS, 'text');
-      measurer.setAttribute('font-size', FOOT_FS);
-      measurer.setAttribute('font-family', 'Inter, sans-serif');
-      measurer.setAttribute('font-weight', '400');
-      measurer.setAttribute('visibility', 'hidden');
-      svg.appendChild(measurer);
-
-      const measure = (s) => {
-        measurer.textContent = s;
-        try { return measurer.getComputedTextLength(); }
-        catch (_) { return s.length * FOOT_FS * 0.55; }
-      };
-
-      // Greedy word-wrap into lines that each fit within availLen.
-      const words = FOOT_TEXT.split(/\s+/).filter(Boolean);
-      const lines = [];
-      let cur = '';
-      for (const w of words) {
-        const trial = cur ? cur + ' ' + w : w;
-        if (availLen > 0 && measure(trial) > availLen && cur) {
-          lines.push(cur);
-          cur = w;
-        } else {
-          cur = trial;
-        }
-      }
-      if (cur) lines.push(cur);
-
-      svg.removeChild(measurer);
-
-      // Render each line. The first (index 0) sits at the right edge;
-      // subsequent lines stack inward (to the left) by footLH each.
-      // After translate(x, TITLE_PAD) rotate(90), local +x goes screen-down
-      // (text runs top→bottom). x offset = -i * footLH shifts each new line left.
+      const lines = FOOT_TEXT.split('\n');
+      const lineH = FOOT_FS * 1.35;
+      // rotate(-90) keeps the footnote on the right edge reading bottom→top.
+      // Line 0 sits flush against the right edge; each subsequent line stacks to its LEFT
+      // (local +y after rotate(-90) → screen -x).
       lines.forEach((line, i) => {
         const t = document.createElementNS(svgNS, 'text');
         t.setAttribute('fill', 'white');
@@ -471,12 +436,10 @@
         t.setAttribute('font-family', 'Inter, sans-serif');
         t.setAttribute('font-weight', '400');
         t.setAttribute('text-anchor', 'start');
-        const xPos = (W - TITLE_PAD) - i * footLH;
-        t.setAttribute('transform', `translate(${xPos}, ${TITLE_PAD}) rotate(90)`);
+        t.setAttribute('transform', `translate(${W - FOOT_PAD}, ${H - FOOT_PAD}) rotate(-90) translate(0, ${-i * lineH})`);
         t.textContent = line;
         g.appendChild(t);
       });
-
       root.appendChild(g);
     }
 
@@ -615,6 +578,7 @@
   footEnabledIn.addEventListener('change', () => { FOOT_ENABLED = footEnabledIn.checked; redraw(); });
   footIn.addEventListener('input', () => { FOOT_TEXT = footIn.value; redraw(); });
   footFsIn.addEventListener('input', () => { FOOT_FS = +footFsIn.value; footFsVal.textContent = FOOT_FS + ' px'; redraw(); });
+  footPadIn.addEventListener('input', () => { FOOT_PAD = +footPadIn.value; footPadVal.textContent = FOOT_PAD + ' px'; redraw(); });
 
   fitSelect.addEventListener('change', () => { FIT = fitSelect.value; imgPos = null; redraw(); });
   scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE + ' %'; redraw(); });
@@ -727,5 +691,6 @@
   titlePadVal.textContent = TITLE_PAD + ' px';
   logoHVal.textContent = LOGO_H + ' px';
   footFsVal.textContent = FOOT_FS + ' px';
+  footPadVal.textContent = FOOT_PAD + ' px';
   generate();
 })();
