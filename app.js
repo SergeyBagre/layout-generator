@@ -635,7 +635,7 @@
       }
     });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap'); text { font-family: 'Inter', sans-serif; font-synthesis: none; -webkit-font-synthesis: none; } text[data-line-index] { font-weight: 600; font-synthesis: none; -webkit-font-synthesis: none; }`;
+    style.textContent = `text { font-family: 'Inter', 'Inter SemiBold', sans-serif; font-synthesis: none !important; -webkit-font-synthesis: none !important; } text[data-line-index] { font-family: 'Inter', 'Inter SemiBold', sans-serif !important; font-weight: 600 !important; font-synthesis: none !important; -webkit-font-synthesis: none !important; }`;
     clone.insertBefore(style, clone.firstChild);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   }
@@ -700,5 +700,24 @@
   logoHVal.textContent = LOGO_H + ' px';
   footFsVal.textContent = FOOT_FS + ' px';
   footPadVal.textContent = FOOT_PAD + ' px';
+  // Tabs
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.tab;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.toggle('active', p.dataset.tabContent === name);
+      });
+    });
+  });
+
+  // Theme toggle
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+    });
+  }
+
   generate();
 })();

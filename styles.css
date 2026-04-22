@@ -35,6 +35,45 @@ html, body {
   padding-right: 4px;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover { color: rgba(255, 255, 255, 0.8); }
+
+.tab.active {
+  background: #111;
+  color: #fff;
+}
+
+.tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tab-panel.active { display: flex; }
+
 .panel {
   background: #111;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -351,3 +390,141 @@ html, body {
 
 #canvas .random-btn { cursor: pointer; }
 #canvas .random-btn:hover circle { fill: rgba(255, 255, 255, 0.15); }
+
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.theme-toggle:hover { border-color: rgba(255, 255, 255, 0.3); }
+
+.theme-toggle .icon-sun { display: none; }
+.theme-toggle .icon-moon { display: block; }
+
+body.light-theme .theme-toggle .icon-sun { display: block; }
+body.light-theme .theme-toggle .icon-moon { display: none; }
+
+body.light-theme {
+  background: #f5f5f5;
+  color: #111;
+}
+
+body.light-theme .panel {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .panel-header {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+body.light-theme .panel-header:hover { color: rgba(0, 0, 0, 0.75); }
+
+body.light-theme .panel.open .panel-header {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme .field label { color: #111; }
+body.light-theme .field label .val { color: rgba(0, 0, 0, 0.5); }
+body.light-theme .field label .val.editable:hover {
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+body.light-theme .field label .val-input {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #111;
+}
+
+body.light-theme .field input[type="number"],
+body.light-theme .field textarea,
+body.light-theme .field select {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #111;
+}
+
+body.light-theme .field input[type="number"]:focus,
+body.light-theme .field textarea:focus,
+body.light-theme .field select:focus {
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+body.light-theme .field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='rgba(0,0,0,0.5)' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+body.light-theme .field select option { background: #fff; color: #111; }
+
+body.light-theme .field input[type="range"] {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .field input[type="range"]::-webkit-slider-thumb { background: #111; }
+body.light-theme .field input[type="range"]::-moz-range-thumb { background: #111; }
+
+body.light-theme .file-btn {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #111;
+}
+body.light-theme .file-btn:hover { border-color: rgba(0, 0, 0, 0.3); }
+
+body.light-theme .inline-btn { color: rgba(0, 0, 0, 0.5); }
+body.light-theme .inline-btn:hover { color: #111; }
+
+body.light-theme .hint { color: rgba(0, 0, 0, 0.5); }
+
+body.light-theme .hint-panel {
+  background: #fafafa;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+body.light-theme .btn-secondary {
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+body.light-theme .btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+body.light-theme .btn-primary {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+body.light-theme .btn-primary:hover { background: #000; }
+
+body.light-theme .tabs {
+  background: #ececec;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .tab { color: rgba(0, 0, 0, 0.5); }
+body.light-theme .tab:hover { color: rgba(0, 0, 0, 0.8); }
+body.light-theme .tab.active {
+  background: #fff;
+  color: #111;
+}
+
+body.light-theme .theme-toggle {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #111;
+}
+body.light-theme .theme-toggle:hover { border-color: rgba(0, 0, 0, 0.3); }
