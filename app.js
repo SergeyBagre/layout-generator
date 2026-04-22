@@ -416,24 +416,67 @@
     if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
     if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
 
-    // Footnote — vertical, reading top-to-bottom, anchored at top-right
+    // Footnote — vertical, reading top-to-bottom along the right edge.
+    // Wraps to multiple lines when text is longer than the available vertical space;
+    // additional lines stack toward the right edge (each new line sits further right).
     if (FOOT_ENABLED && FOOT_TEXT.trim()) {
       const g = document.createElementNS(svgNS, 'g');
       g.dataset.role = 'footnote';
       g.setAttribute('pointer-events', 'none');
-      // Rotate 90°: text baseline runs downward along the right edge.
-      // After rotate(90), the local x-axis points down (+screen-y), local y-axis points left (-screen-x).
-      // Anchor at the top-right corner so the text starts at the top and grows downward.
-      const t = document.createElementNS(svgNS, 'text');
-      t.setAttribute('fill', 'white');
-      t.setAttribute('font-size', FOOT_FS);
-      t.setAttribute('font-family', 'Inter, sans-serif');
-      t.setAttribute('font-weight', '400');
-      t.setAttribute('text-anchor', 'start');
-      // Translate to the top-right corner (TITLE_PAD from right and top), then rotate 90°.
-      t.setAttribute('transform', `translate(${W - TITLE_PAD}, ${TITLE_PAD}) rotate(90)`);
-      t.textContent = FOOT_TEXT;
-      g.appendChild(t);
+
+      // Available length along the vertical axis (from top padding to bottom padding).
+      const availLen = Math.max(0, H - TITLE_PAD * 2);
+      // Line height for stacking columns toward the edge.
+      const footLH = Math.round(FOOT_FS * 1.3);
+
+      // Measure text width using a hidden text element appended to the live svg.
+      const measurer = document.createElementNS(svgNS, 'text');
+      measurer.setAttribute('font-size', FOOT_FS);
+      measurer.setAttribute('font-family', 'Inter, sans-serif');
+      measurer.setAttribute('font-weight', '400');
+      measurer.setAttribute('visibility', 'hidden');
+      svg.appendChild(measurer);
+
+      const measure = (s) => {
+        measurer.textContent = s;
+        try { return measurer.getComputedTextLength(); }
+        catch (_) { return s.length * FOOT_FS * 0.55; }
+      };
+
+      // Greedy word-wrap into lines that each fit within availLen.
+      const words = FOOT_TEXT.split(/\s+/).filter(Boolean);
+      const lines = [];
+      let cur = '';
+      for (const w of words) {
+        const trial = cur ? cur + ' ' + w : w;
+        if (availLen > 0 && measure(trial) > availLen && cur) {
+          lines.push(cur);
+          cur = w;
+        } else {
+          cur = trial;
+        }
+      }
+      if (cur) lines.push(cur);
+
+      svg.removeChild(measurer);
+
+      // Render each line. The first (index 0) sits at the right edge;
+      // subsequent lines stack inward (to the left) by footLH each.
+      // After translate(x, TITLE_PAD) rotate(90), local +x goes screen-down
+      // (text runs top→bottom). x offset = -i * footLH shifts each new line left.
+      lines.forEach((line, i) => {
+        const t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('fill', 'white');
+        t.setAttribute('font-size', FOOT_FS);
+        t.setAttribute('font-family', 'Inter, sans-serif');
+        t.setAttribute('font-weight', '400');
+        t.setAttribute('text-anchor', 'start');
+        const xPos = (W - TITLE_PAD) - i * footLH;
+        t.setAttribute('transform', `translate(${xPos}, ${TITLE_PAD}) rotate(90)`);
+        t.textContent = line;
+        g.appendChild(t);
+      });
+
       root.appendChild(g);
     }
 
