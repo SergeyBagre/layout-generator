@@ -211,10 +211,9 @@
   function fitCanvasToViewport() {
     const wrap = canvas.parentElement;
     if (!wrap) return;
-    const OFFSET = 24;
-    const availW = Math.max(0, wrap.clientWidth - OFFSET);
-    const availH = Math.max(0, wrap.clientHeight - OFFSET);
-    if (availW <= 0 || availH <= 0 || W <= 0 || H <= 0) return;
+    const availW = wrap.clientWidth;
+    const availH = wrap.clientHeight;
+    if (availW <= 0 || availH <= 0) return;
     const scale = Math.min(1, availW / W, availH / H);
     canvas.style.transform = `scale(${scale})`;
   }
