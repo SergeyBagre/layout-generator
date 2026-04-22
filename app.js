@@ -21,8 +21,6 @@
   const footIn = document.getElementById('footInput');
   const footFsIn = document.getElementById('footFsInput');
   const footFsVal = document.getElementById('footFsVal');
-  const footPadIn = document.getElementById('footPadInput');
-  const footPadVal = document.getElementById('footPadVal');
   const canvas = document.getElementById('canvas');
   const downloadBtn = document.getElementById('downloadBtn');
   const exportJpgBtn = document.getElementById('exportJpgBtn');
@@ -58,7 +56,6 @@
   let FOOT_ENABLED = footEnabledIn.checked;
   let FOOT_TEXT = footIn.value;
   let FOOT_FS = +footFsIn.value;
-  let FOOT_PAD = +footPadIn.value;
 
   // Logo geometry (from Logo.svg): viewBox 0 0 1018 148, content extends to ~561 in x
   const LOGO_VB_W = 1018;
@@ -419,29 +416,24 @@
     if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
     if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
 
-    // Footnote — vertical, reading bottom-to-top, anchored at bottom-right
+    // Footnote — vertical, reading top-to-bottom, anchored at top-right
     if (FOOT_ENABLED && FOOT_TEXT.trim()) {
       const g = document.createElementNS(svgNS, 'g');
       g.dataset.role = 'footnote';
       g.setAttribute('pointer-events', 'none');
-      const lines = FOOT_TEXT.split('\n');
-      const lineH = FOOT_FS * 1.35;
-      // Transform origin at bottom-right, rotated -90°.
-      // In rotated local coords: local-x goes up (screen), local-y goes right (screen).
-      // So dy between lines shifts columns screen-rightward; to stack new lines to the
-      // LEFT of the first (natural vertical reading order), use negative dy.
-      lines.forEach((line, i) => {
-        const t = document.createElementNS(svgNS, 'text');
-        t.setAttribute('fill', 'white');
-        t.setAttribute('font-size', FOOT_FS);
-        t.setAttribute('font-family', 'Inter, sans-serif');
-        t.setAttribute('font-weight', '400');
-        t.setAttribute('text-anchor', 'start');
-        // First line anchored flush to right edge (local y = 0). Subsequent lines shift left by lineH each.
-        t.setAttribute('transform', `translate(${W - FOOT_PAD}, ${H - FOOT_PAD}) rotate(-90) translate(0, ${-i * lineH})`);
-        t.textContent = line;
-        g.appendChild(t);
-      });
+      // Rotate 90°: text baseline runs downward along the right edge.
+      // After rotate(90), the local x-axis points down (+screen-y), local y-axis points left (-screen-x).
+      // Anchor at the top-right corner so the text starts at the top and grows downward.
+      const t = document.createElementNS(svgNS, 'text');
+      t.setAttribute('fill', 'white');
+      t.setAttribute('font-size', FOOT_FS);
+      t.setAttribute('font-family', 'Inter, sans-serif');
+      t.setAttribute('font-weight', '400');
+      t.setAttribute('text-anchor', 'start');
+      // Translate to the top-right corner (TITLE_PAD from right and top), then rotate 90°.
+      t.setAttribute('transform', `translate(${W - TITLE_PAD}, ${TITLE_PAD}) rotate(90)`);
+      t.textContent = FOOT_TEXT;
+      g.appendChild(t);
       root.appendChild(g);
     }
 
@@ -580,7 +572,6 @@
   footEnabledIn.addEventListener('change', () => { FOOT_ENABLED = footEnabledIn.checked; redraw(); });
   footIn.addEventListener('input', () => { FOOT_TEXT = footIn.value; redraw(); });
   footFsIn.addEventListener('input', () => { FOOT_FS = +footFsIn.value; footFsVal.textContent = FOOT_FS + ' px'; redraw(); });
-  footPadIn.addEventListener('input', () => { FOOT_PAD = +footPadIn.value; footPadVal.textContent = FOOT_PAD + ' px'; redraw(); });
 
   fitSelect.addEventListener('change', () => { FIT = fitSelect.value; imgPos = null; redraw(); });
   scaleInput.addEventListener('input', () => { SCALE = +scaleInput.value; scaleVal.textContent = SCALE + ' %'; redraw(); });
@@ -693,6 +684,5 @@
   titlePadVal.textContent = TITLE_PAD + ' px';
   logoHVal.textContent = LOGO_H + ' px';
   footFsVal.textContent = FOOT_FS + ' px';
-  footPadVal.textContent = FOOT_PAD + ' px';
   generate();
 })();
