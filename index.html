@@ -128,25 +128,30 @@
             <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M3 4h10M3 8h10M3 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
             </svg>
-            <span class="panel-title">Текст в квадратах</span>
+            <span class="panel-title">Текст</span>
             <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
           <div class="panel-body">
-            <div class="field">
-              <label>Квадрат 1</label>
-              <textarea id="text1InputLayout" rows="3">В реестре
+            <div class="toggle-row">
+              <span class="toggle-label" id="textEnabledLabelLayout">Текст</span>
+              <label class="switch">
+                <input type="checkbox" id="textEnabledInputLayout">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="text-controls" id="textControlsLayout">
+              <div class="field field-spaced">
+                <label>Квадрат 1</label>
+                <textarea id="text1InputLayout" rows="3">В реестре
 российской
 продукции</textarea>
-            </div>
-            <div class="field">
-              <label>Квадрат 2</label>
-              <textarea id="text2InputLayout" rows="2">AQDesk K790</textarea>
-            </div>
-            <div class="field">
-              <label>Размер текста в квадратах <span class="val editable" data-target="fsInputLayout" data-suffix=" px" id="fsValLayout">16 px</span></label>
-              <input type="range" id="fsInputLayout" min="8" max="48" step="1" value="16">
+              </div>
+              <div class="field field-spaced">
+                <label>Квадрат 2</label>
+                <textarea id="text2InputLayout" rows="2">AQDesk K790</textarea>
+              </div>
             </div>
           </div>
         </div>

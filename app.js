@@ -13,11 +13,12 @@
   const wInLayout = document.getElementById('wInputLayout');
   const hInLayout = document.getElementById('hInputLayout');
   const cInLayout = document.getElementById('cInputLayout');
-  const fsInLayout = document.getElementById('fsInputLayout');
   const cValLayout = document.getElementById('cValLayout');
-  const fsValLayout = document.getElementById('fsValLayout');
   const text1InLayout = document.getElementById('text1InputLayout');
   const text2InLayout = document.getElementById('text2InputLayout');
+  const textEnabledInLayout = document.getElementById('textEnabledInputLayout');
+  const textEnabledLabelLayout = document.getElementById('textEnabledLabelLayout');
+  const textControlsElLayout = document.getElementById('textControlsLayout');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -51,8 +52,10 @@
 
   // Layout-only independent state (not shared with pattern)
   let W_L = +wInLayout.value, H_L = +hInLayout.value;
-  let COUNT_L = +cInLayout.value, FS_L = +fsInLayout.value;
+  let COUNT_L = +cInLayout.value;
+  let FS_L = 16;
   let TEXT1_L = text1InLayout.value, TEXT2_L = text2InLayout.value;
+  let TEXT_ENABLED_L = textEnabledInLayout.checked;
 
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -433,8 +436,8 @@
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       specialDefs = [
-        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L, showText: true, patternHandles: false },
-        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L, showText: true, patternHandles: false }
+        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L, showText: TEXT_ENABLED_L, patternHandles: false },
+        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L, showText: TEXT_ENABLED_L, patternHandles: false }
       ];
     } else {
       specialDefs = [];
@@ -1130,11 +1133,6 @@
     if (activeTab === 'layout') COUNT = COUNT_L;
     if (activeTab === 'layout') generate_L(); else redraw();
   });
-  fsInLayout.addEventListener('input', () => {
-    FS_L = +fsInLayout.value; fsValLayout.textContent = FS_L + ' px';
-    if (activeTab === 'layout') FS = FS_L;
-    redraw();
-  });
   text1InLayout.addEventListener('input', () => {
     TEXT1_L = text1InLayout.value;
     if (activeTab === 'layout') TEXT1 = TEXT1_L;
@@ -1145,6 +1143,21 @@
     if (activeTab === 'layout') TEXT2 = TEXT2_L;
     redraw();
   });
+
+  function applyTextEnabledUILayout() {
+    textControlsElLayout.classList.toggle('disabled', !TEXT_ENABLED_L);
+    text1InLayout.disabled = !TEXT_ENABLED_L;
+    text2InLayout.disabled = !TEXT_ENABLED_L;
+    text1InLayout.readOnly = !TEXT_ENABLED_L;
+    text2InLayout.readOnly = !TEXT_ENABLED_L;
+    textEnabledLabelLayout.textContent = 'Текст';
+  }
+  textEnabledInLayout.addEventListener('change', () => {
+    TEXT_ENABLED_L = textEnabledInLayout.checked;
+    applyTextEnabledUILayout();
+    if (activeTab === 'layout') redraw();
+  });
+  applyTextEnabledUILayout();
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
@@ -1262,7 +1275,6 @@
 
   cVal.textContent = COUNT;
   // Independent layout-tab labels
-  fsValLayout.textContent = FS_L + ' px';
   cValLayout.textContent = COUNT_L;
   scaleVal.textContent = SCALE + ' %';
   titleFsVal.textContent = TITLE_FS + ' px';
