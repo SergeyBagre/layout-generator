@@ -549,14 +549,24 @@
         if (patternHandles) {
           const indicatorR = Math.max(4, fs * 0.28);
           const hitR = Math.max(22, indicatorR * 4);
-          let ax, ay, cornerXSide, cornerYSide;
           const offset = 6;
+          let ax, ay, cornerXSide, cornerYSide;
           switch (textPos) {
-            case 'top-left': ax = tbX - offset; ay = tbY - offset; cornerXSide = 'left'; cornerYSide = 'top'; break;
-            case 'top-right': ax = tbX + tbW + offset; ay = tbY - offset; cornerXSide = 'right'; cornerYSide = 'top'; break;
-            case 'bottom-left': ax = tbX - offset; ay = tbY + tbH + offset; cornerXSide = 'left'; cornerYSide = 'bottom'; break;
-            case 'bottom-right': ax = tbX + tbW + offset; ay = tbY + tbH + offset; cornerXSide = 'right'; cornerYSide = 'bottom'; break;
-            default: ax = tbX - offset; ay = tbY - offset; cornerXSide = 'left'; cornerYSide = 'top';
+            case 'top-left':
+              ax = tbX + tbW + offset; ay = tbY + tbH + offset;
+              cornerXSide = 'right'; cornerYSide = 'bottom'; break;
+            case 'top-right':
+              ax = tbX - offset; ay = tbY + tbH + offset;
+              cornerXSide = 'left'; cornerYSide = 'bottom'; break;
+            case 'bottom-left':
+              ax = tbX + tbW + offset; ay = tbY - offset;
+              cornerXSide = 'right'; cornerYSide = 'top'; break;
+            case 'bottom-right':
+              ax = tbX - offset; ay = tbY - offset;
+              cornerXSide = 'left'; cornerYSide = 'top'; break;
+            default:
+              ax = tbX + tbW + offset; ay = tbY + tbH + offset;
+              cornerXSide = 'right'; cornerYSide = 'bottom';
           }
           const anchorG = document.createElementNS(svgNS, 'g');
           anchorG.classList.add('anchor-indicator');
