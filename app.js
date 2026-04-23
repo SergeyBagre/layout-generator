@@ -728,14 +728,18 @@
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
     if (drag.role === 'text-resize' && activeTab === 'pattern') {
-      const delta = ((pt.x - drag.startPt.x) + (pt.y - drag.startPt.y)) * 0.5;
-      const signed = drag.signX * (pt.x - drag.startPt.x) + drag.signY * (pt.y - drag.startPt.y);
-      const newFs = clamp(Math.round(drag.startFs + signed * 0.5), 8, 120);
-      s1Fs = newFs;
-      fsIn.value = newFs;
-      fsVal.textContent = newFs + ' px';
-      FS = newFs;
-      drag.moved = true; redraw();
+      const dx = pt.x - drag.startPt.x;
+      const dy = pt.y - drag.startPt.y;
+      const signed = drag.signX * dx + drag.signY * dy;
+      const newFs = clamp(Math.round(drag.startFs + signed), 8, 120);
+      if (newFs !== s1Fs) {
+        s1Fs = newFs;
+        fsIn.value = newFs;
+        fsVal.textContent = newFs + ' px';
+        FS = newFs;
+        drag.moved = true;
+        redraw();
+      }
       return;
     }
     if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
