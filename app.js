@@ -81,6 +81,7 @@
   let FIT = fitSelect.value;
   let SCALE = +scaleInput.value;
   let seed = Date.now();
+  let activeTab = 'pattern';
 
   let s1 = null, s2 = null, pat = null, imgPos = null;
   let currentSq = 0;
@@ -199,6 +200,10 @@
   function redraw() {
     const sq = currentSquareSize();
     currentSq = sq;
+    if (activeTab === 'layout') {
+      render(sq, []);
+      return;
+    }
     if (!s1 || !s2 || lastFilled.length === 0) { generate(); return; }
     s1.x = clamp(s1.x, 0, W - sq); s1.y = clamp(s1.y, 0, H - sq);
     s2.x = clamp(s2.x, 0, W - sq); s2.y = clamp(s2.y, 0, H - sq);
@@ -248,17 +253,19 @@
     bgRect.setAttribute('fill', '#A4BECA');
     root.appendChild(bgRect);
 
-    filled.forEach(({ c, r }) => {
-      const el = document.createElementNS(svgNS, 'rect');
-      el.setAttribute('x', s1.x + c * sq);
-      el.setAttribute('y', s1.y + r * sq);
-      el.setAttribute('width', sq);
-      el.setAttribute('height', sq);
-      el.setAttribute('fill', '#0098B6');
-      root.appendChild(el);
-    });
+    if (activeTab === 'pattern') {
+      filled.forEach(({ c, r }) => {
+        const el = document.createElementNS(svgNS, 'rect');
+        el.setAttribute('x', s1.x + c * sq);
+        el.setAttribute('y', s1.y + r * sq);
+        el.setAttribute('width', sq);
+        el.setAttribute('height', sq);
+        el.setAttribute('fill', '#0098B6');
+        root.appendChild(el);
+      });
+    }
 
-    if (IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
+    if (activeTab === 'layout' && IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
       const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
       if (!imgPos) imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
       const imgEl = document.createElementNS(svgNS, 'image');
@@ -272,10 +279,10 @@
       root.appendChild(imgEl);
     }
 
-    const specialDefs = [
+    const specialDefs = (activeTab === 'pattern') ? [
       { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true },
       { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false }
-    ];
+    ] : [];
     specialDefs.forEach(({ sp, lines, textPos, role, isFirst }) => {
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
@@ -424,35 +431,37 @@
       return g;
     }
 
-    const titleG = buildTitleGroup();
-    const logoG = buildLogoGroup();
-    const topEl = SWAP ? logoG : titleG;
-    const bottomEl = SWAP ? titleG : logoG;
-    if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
-    if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
+    if (activeTab === 'layout') {
+      const titleG = buildTitleGroup();
+      const logoG = buildLogoGroup();
+      const topEl = SWAP ? logoG : titleG;
+      const bottomEl = SWAP ? titleG : logoG;
+      if (topEl) { topEl._placeTop(TITLE_PAD, TITLE_PAD); root.appendChild(topEl); }
+      if (bottomEl) { bottomEl._placeBottom(TITLE_PAD, TITLE_PAD); root.appendChild(bottomEl); }
 
-    // Footnote — vertical, anchored at bottom-right corner (unchanged position)
-    if (FOOT_ENABLED && FOOT_TEXT.trim()) {
-      const g = document.createElementNS(svgNS, 'g');
-      g.dataset.role = 'footnote';
-      g.setAttribute('pointer-events', 'none');
-      const lines = FOOT_TEXT.split('\n');
-      const lineH = FOOT_FS * 1.35;
-      // rotate(-90) keeps the footnote on the right edge reading bottom→top.
-      // Line 0 sits flush against the right edge; each subsequent line stacks to its LEFT
-      // (local +y after rotate(-90) → screen -x).
-      lines.forEach((line, i) => {
-        const t = document.createElementNS(svgNS, 'text');
-        t.setAttribute('fill', 'white');
-        t.setAttribute('font-size', FOOT_FS);
-        t.setAttribute('font-family', 'Inter, sans-serif');
-        t.setAttribute('font-weight', '400');
-        t.setAttribute('text-anchor', 'start');
-        t.setAttribute('transform', `translate(${W - FOOT_PAD}, ${H - FOOT_PAD}) rotate(-90) translate(0, ${-i * lineH})`);
-        t.textContent = line;
-        g.appendChild(t);
-      });
-      root.appendChild(g);
+      // Footnote — vertical, anchored at bottom-right corner (unchanged position)
+      if (FOOT_ENABLED && FOOT_TEXT.trim()) {
+        const g = document.createElementNS(svgNS, 'g');
+        g.dataset.role = 'footnote';
+        g.setAttribute('pointer-events', 'none');
+        const lines = FOOT_TEXT.split('\n');
+        const lineH = FOOT_FS * 1.35;
+        // rotate(-90) keeps the footnote on the right edge reading bottom→top.
+        // Line 0 sits flush against the right edge; each subsequent line stacks to its LEFT
+        // (local +y after rotate(-90) → screen -x).
+        lines.forEach((line, i) => {
+          const t = document.createElementNS(svgNS, 'text');
+          t.setAttribute('fill', 'white');
+          t.setAttribute('font-size', FOOT_FS);
+          t.setAttribute('font-family', 'Inter, sans-serif');
+          t.setAttribute('font-weight', '400');
+          t.setAttribute('text-anchor', 'start');
+          t.setAttribute('transform', `translate(${W - FOOT_PAD}, ${H - FOOT_PAD}) rotate(-90) translate(0, ${-i * lineH})`);
+          t.textContent = line;
+          g.appendChild(t);
+        });
+        root.appendChild(g);
+      }
     }
 
     svg.appendChild(root);
@@ -757,8 +766,6 @@
     FIT: FIT, SCALE: SCALE,
     imgPos: null, IMG_SRC: null, IMG_NATURAL: { w: 0, h: 0 }, fileName: fileName.textContent,
   };
-
-  let activeTab = 'pattern';
 
   function syncPatternVars() {
     W = +wIn.value; H = +hIn.value; COUNT = +cIn.value; FS = +fsIn.value;
