@@ -90,6 +90,62 @@
       </div>
 
       <div class="tab-panel" data-tab-content="layout">
+        <div class="panel" data-panel="layout-params">
+          <button class="panel-header" type="button">
+            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9z" stroke="currentColor" stroke-width="1.3"/>
+            </svg>
+            <span class="panel-title">Параметры</span>
+            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="panel-body">
+            <div class="row-pair">
+              <div class="field">
+                <label>Ширина</label>
+                <input type="number" id="wInputLayout" min="300" max="1920" step="10" value="1280">
+              </div>
+              <div class="field">
+                <label>Высота</label>
+                <input type="number" id="hInputLayout" min="300" max="1080" step="10" value="720">
+              </div>
+            </div>
+            <div class="field">
+              <label>Количество квадратов <span class="val editable" data-target="cInputLayout" id="cValLayout">8</span></label>
+              <input type="range" id="cInputLayout" min="2" max="30" step="1" value="8">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="layout-squares">
+          <button class="panel-header" type="button">
+            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M3 8h10M3 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <span class="panel-title">Текст в квадратах</span>
+            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="panel-body">
+            <div class="field">
+              <label>Квадрат 1</label>
+              <textarea id="text1InputLayout" rows="3">В реестре
+российской
+продукции</textarea>
+            </div>
+            <div class="field">
+              <label>Квадрат 2</label>
+              <textarea id="text2InputLayout" rows="2">AQDesk K790</textarea>
+            </div>
+            <div class="field">
+              <label>Размер текста в квадратах <span class="val editable" data-target="fsInputLayout" data-suffix=" px" id="fsValLayout">16 px</span></label>
+              <input type="range" id="fsInputLayout" min="8" max="48" step="1" value="16">
+            </div>
+          </div>
+        </div>
+
         <div class="panel" data-panel="title">
           <button class="panel-header" type="button">
             <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">

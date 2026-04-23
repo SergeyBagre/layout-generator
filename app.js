@@ -7,6 +7,16 @@
   const fsVal = document.getElementById('fsVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
+
+  // Layout-only independent inputs (no shared implementation with pattern)
+  const wInLayout = document.getElementById('wInputLayout');
+  const hInLayout = document.getElementById('hInputLayout');
+  const cInLayout = document.getElementById('cInputLayout');
+  const fsInLayout = document.getElementById('fsInputLayout');
+  const cValLayout = document.getElementById('cValLayout');
+  const fsValLayout = document.getElementById('fsValLayout');
+  const text1InLayout = document.getElementById('text1InputLayout');
+  const text2InLayout = document.getElementById('text2InputLayout');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -35,6 +45,12 @@
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
+
+  // Layout-only independent state (not shared with pattern)
+  let W_L = +wInLayout.value, H_L = +hInLayout.value;
+  let COUNT_L = +cInLayout.value, FS_L = +fsInLayout.value;
+  let TEXT1_L = text1InLayout.value, TEXT2_L = text2InLayout.value;
+
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
 
@@ -594,10 +610,49 @@
   handleNumberInput(wIn, 300, 1920, (v) => { W = v; });
   handleNumberInput(hIn, 300, 1080, (v) => { H = v; });
 
+  // Independent layout-tab number inputs (separate handler — no shared impl)
+  const handleLayoutNumberInput = (input, min, max, setter) => {
+    const apply = () => {
+      let v = parseInt(input.value, 10);
+      if (isNaN(v)) v = min;
+      v = clamp(v, min, max);
+      input.value = v; setter(v);
+      imgPos = null;
+      if (activeTab === 'layout') { W = W_L; H = H_L; }
+      redraw();
+    };
+    input.addEventListener('change', apply);
+    input.addEventListener('blur', apply);
+  };
+  handleLayoutNumberInput(wInLayout, 300, 1920, (v) => { W_L = v; });
+  handleLayoutNumberInput(hInLayout, 300, 1080, (v) => { H_L = v; });
+
   cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
+
+  // Independent layout-tab listeners (not shared with pattern tab)
+  cInLayout.addEventListener('input', () => {
+    COUNT_L = +cInLayout.value; cValLayout.textContent = COUNT_L;
+    if (activeTab === 'layout') COUNT = COUNT_L;
+    redraw();
+  });
+  fsInLayout.addEventListener('input', () => {
+    FS_L = +fsInLayout.value; fsValLayout.textContent = FS_L + ' px';
+    if (activeTab === 'layout') FS = FS_L;
+    redraw();
+  });
+  text1InLayout.addEventListener('input', () => {
+    TEXT1_L = text1InLayout.value;
+    if (activeTab === 'layout') TEXT1 = TEXT1_L;
+    redraw();
+  });
+  text2InLayout.addEventListener('input', () => {
+    TEXT2_L = text2InLayout.value;
+    if (activeTab === 'layout') TEXT2 = TEXT2_L;
+    redraw();
+  });
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
@@ -715,6 +770,9 @@
 
   fsVal.textContent = FS + ' px';
   cVal.textContent = COUNT;
+  // Independent layout-tab labels
+  fsValLayout.textContent = FS_L + ' px';
+  cValLayout.textContent = COUNT_L;
   scaleVal.textContent = SCALE + ' %';
   titleFsVal.textContent = TITLE_FS + ' px';
   titlePadVal.textContent = TITLE_PAD + ' px';
@@ -856,7 +914,10 @@
         currentSq = patternState.currentSq;
       } else {
         restoreInputs(layoutInputs, deepClone(layoutState.inputs));
-        W = layoutState.W; H = layoutState.H;
+        // Layout has its OWN independent W/H/COUNT/FS/TEXT1/TEXT2
+        W = W_L; H = H_L;
+        COUNT = COUNT_L; FS = FS_L;
+        TEXT1 = TEXT1_L; TEXT2 = TEXT2_L;
         TITLE_TEXT = layoutState.TITLE_TEXT;
         TITLE_FS = layoutState.TITLE_FS;
         TITLE_PAD = layoutState.TITLE_PAD;
