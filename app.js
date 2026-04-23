@@ -47,7 +47,7 @@
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value;
   let FS = 16;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
-  let TEXT_ENABLED = !textEnabledIn.checked;
+  let TEXT_ENABLED = textEnabledIn.checked;
 
   // Layout-only independent state (not shared with pattern)
   let W_L = +wInLayout.value, H_L = +hInLayout.value;
@@ -1115,10 +1115,10 @@
     text2In.disabled = !TEXT_ENABLED;
     text1In.readOnly = !TEXT_ENABLED;
     text2In.readOnly = !TEXT_ENABLED;
-    textEnabledLabel.textContent = TEXT_ENABLED ? 'Скрыть текст' : 'Показать текст';
+    textEnabledLabel.textContent = 'Текст';
   }
   textEnabledIn.addEventListener('change', () => {
-    TEXT_ENABLED = !textEnabledIn.checked;
+    TEXT_ENABLED = textEnabledIn.checked;
     applyTextEnabledUI();
     redraw();
   });
