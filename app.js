@@ -421,16 +421,13 @@
 
     let specialDefs;
     if (activeTab === 'pattern') {
-      // Fixed square size = 1/3 of min(W,H). No per-square resizing.
       const sq1 = sq;
       const sq2 = sq;
       const fs1 = s1Fs != null ? s1Fs : FS;
-      // MASTER-SLAVE: s2 mirrors s1's text + font-size exactly
       const fs2 = fs1;
-      const text2Display = TEXT1;
       specialDefs = [
         { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq1, fsSize: fs1, showText: TEXT_ENABLED, patternHandles: true, textRole: 'text1', isMaster: true },
-        { sp: s2, lines: text2Display.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text1', isMaster: false }
+        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text2', isMaster: false }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       specialDefs = [
@@ -472,6 +469,7 @@
         case 'bottom-right': tx = sp.x + sq - margin; ty = sp.y + sq - totalH - margin + fs * 0.9; anchor = 'end'; break;
         default: tx = sp.x + sq / 2; ty = sp.y + (sq - totalH) / 2 + fs * 0.9; anchor = 'middle';
       }
+      const textEls = [];
       if (showText) {
         lines.forEach((line, i) => {
           const t = document.createElementNS(svgNS, 'text');
@@ -485,28 +483,52 @@
           t.setAttribute('pointer-events', 'none');
           t.textContent = line;
           g.appendChild(t);
+          textEls.push(t);
         });
       }
 
-      // Pattern master-only: text edit hit region + hover-only anchor indicator
       if (patternHandles && showText && TEXT_ENABLED) {
-        const textBlockW = Math.max(60, sq * 0.55);
-        const textBlockH = totalH;
-        let tbX, tbY;
-        switch (textPos) {
-          case 'top-left': tbX = sp.x + margin; tbY = sp.y + margin; break;
-          case 'top-right': tbX = sp.x + sq - margin - textBlockW; tbY = sp.y + margin; break;
-          case 'bottom-left': tbX = sp.x + margin; tbY = sp.y + sq - totalH - margin; break;
-          case 'bottom-right': tbX = sp.x + sq - margin - textBlockW; tbY = sp.y + sq - totalH - margin; break;
-          default: tbX = sp.x + (sq - textBlockW) / 2; tbY = sp.y + (sq - totalH) / 2;
+        root.appendChild(g);
+        svg.appendChild(root);
+        const oldForMeasure = canvas.firstChild;
+        if (oldForMeasure) canvas.replaceChild(svg, oldForMeasure); else canvas.appendChild(svg);
+        let tbX, tbY, tbW, tbH;
+        try {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          textEls.forEach(t => {
+            const b = t.getBBox();
+            if (b.width === 0 && b.height === 0) return;
+            minX = Math.min(minX, b.x);
+            minY = Math.min(minY, b.y);
+            maxX = Math.max(maxX, b.x + b.width);
+            maxY = Math.max(maxY, b.y + b.height);
+          });
+          if (isFinite(minX)) {
+            tbX = minX; tbY = minY;
+            tbW = maxX - minX; tbH = maxY - minY;
+          }
+        } catch (_) {}
+        canvas.removeChild(svg);
+        root.removeChild(g);
+        if (!isFinite(tbX)) {
+          const totalH2 = lines.length * lineH;
+          const approxW = Math.max(...lines.map(l => l.length * fs * 0.55), fs * 2);
+          switch (textPos) {
+            case 'top-left': tbX = sp.x + margin; tbY = sp.y + margin; break;
+            case 'top-right': tbX = sp.x + sq - margin - approxW; tbY = sp.y + margin; break;
+            case 'bottom-left': tbX = sp.x + margin; tbY = sp.y + sq - totalH2 - margin; break;
+            case 'bottom-right': tbX = sp.x + sq - margin - approxW; tbY = sp.y + sq - totalH2 - margin; break;
+            default: tbX = sp.x + (sq - approxW) / 2; tbY = sp.y + (sq - totalH2) / 2;
+          }
+          tbW = approxW; tbH = totalH2;
         }
 
-        // Text edit hit region — enables double-click to edit AND drives anchor visibility
+        const pad = 2;
         const textHit = document.createElementNS(svgNS, 'rect');
-        textHit.setAttribute('x', tbX - 6);
-        textHit.setAttribute('y', tbY - 4);
-        textHit.setAttribute('width', textBlockW + 12);
-        textHit.setAttribute('height', textBlockH + 8);
+        textHit.setAttribute('x', tbX - pad);
+        textHit.setAttribute('y', tbY - pad);
+        textHit.setAttribute('width', tbW + pad * 2);
+        textHit.setAttribute('height', tbH + pad * 2);
         textHit.setAttribute('fill', 'transparent');
         textHit.setAttribute('pointer-events', 'all');
         textHit.classList.add('text-hit');
@@ -514,24 +536,23 @@
         textHit.dataset.role = 'text-edit';
         textHit.style.cursor = 'text';
         textHit.dataset.export = 'skip';
-        // Store text bbox on the hit element so the hover handler can compute nearest corner
         textHit.dataset.tbx = tbX;
         textHit.dataset.tby = tbY;
-        textHit.dataset.tbw = textBlockW;
-        textHit.dataset.tbh = textBlockH;
+        textHit.dataset.tbw = tbW;
+        textHit.dataset.tbh = tbH;
         g.appendChild(textHit);
 
-        // Single cursor-driven anchor indicator — hidden by default, positioned dynamically on hover.
-        // No persistent state: pointer-events:none so it never interferes with text-hit.
-        const indicatorR = Math.max(4, fs * 0.3);
+        const indicatorR = Math.max(4, fs * 0.28);
         const anchorDot = document.createElementNS(svgNS, 'circle');
         anchorDot.setAttribute('cx', tbX);
         anchorDot.setAttribute('cy', tbY);
         anchorDot.setAttribute('r', indicatorR);
         anchorDot.setAttribute('fill', '#84A7BA');
-        anchorDot.setAttribute('pointer-events', 'none');
+        anchorDot.setAttribute('pointer-events', 'all');
         anchorDot.classList.add('anchor-indicator');
+        anchorDot.dataset.role = 'text-resize';
         anchorDot.dataset.export = 'skip';
+        anchorDot.style.cursor = 'nwse-resize';
         g.appendChild(anchorDot);
       }
 
@@ -685,6 +706,10 @@
     const oldSvg = canvas.firstChild;
     if (oldSvg) canvas.replaceChild(svg, oldSvg);
     else canvas.appendChild(svg);
+    if (drag && drag.role === 'text-resize') {
+      const s1g = canvas.querySelector('g.draggable[data-role="s1"]');
+      if (s1g) s1g.classList.add('text-hover');
+    }
   }
 
   // Drag
@@ -702,6 +727,17 @@
     if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
+    if (drag.role === 'text-resize' && activeTab === 'pattern') {
+      const delta = ((pt.x - drag.startPt.x) + (pt.y - drag.startPt.y)) * 0.5;
+      const signed = drag.signX * (pt.x - drag.startPt.x) + drag.signY * (pt.y - drag.startPt.y);
+      const newFs = clamp(Math.round(drag.startFs + signed * 0.5), 8, 120);
+      s1Fs = newFs;
+      fsIn.value = newFs;
+      fsVal.textContent = newFs + ' px';
+      FS = newFs;
+      drag.moved = true; redraw();
+      return;
+    }
     if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2' && activeTab === 'pattern') { const sq = currentSq; s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
@@ -728,8 +764,30 @@
       return;
     }
 
-    // Pattern-only: double-click on text for edit (handled via dblclick listener below).
-    // No text-resize handle exists anymore — anchor dot is a pure visual indicator.
+    if (activeTab === 'pattern') {
+      const anchorTarget = e.target.closest('.anchor-indicator');
+      if (anchorTarget) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pt = getSvgPointFromEvent(e); if (!pt) return;
+        const curFs = s1Fs != null ? s1Fs : FS;
+        const signX = anchorTarget.dataset.cornerX === 'left' ? -1 : 1;
+        const signY = anchorTarget.dataset.cornerY === 'top' ? -1 : 1;
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        drag = {
+          role: 'text-resize',
+          pointerId: e.pointerId,
+          startPt: pt,
+          startFs: curFs,
+          signX: signX,
+          signY: signY,
+          ownerTab: activeTab,
+        };
+        const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+        if (s1g) s1g.classList.add('text-hover');
+        return;
+      }
+    }
 
     const target = e.target.closest('.draggable');
     if (!target) return;
@@ -758,8 +816,13 @@
     if (!drag || e.pointerId !== drag.pointerId) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     if (drag.el) drag.el.classList.remove('active');
+    const wasTextResize = drag.role === 'text-resize';
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
+    if (wasTextResize) {
+      const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+      if (s1g) s1g.classList.remove('text-hover');
+    }
   };
   // Pattern hover-only anchor indicator.
   // The anchor dot is visible ONLY while the cursor is inside the .text-hit region.
@@ -770,27 +833,40 @@
     if (!s1g) return;
     const anchorEl = s1g.querySelector('.anchor-indicator');
     if (!anchorEl) return;
+    if (drag && drag.role === 'text-resize') {
+      s1g.classList.add('text-hover');
+      return;
+    }
     const hit = e.target.closest('.text-hit');
-    if (!hit || hit.closest('g.draggable[data-role="s1"]') !== s1g) {
+    const onAnchor = e.target.closest('.anchor-indicator');
+    if ((!hit && !onAnchor) || (hit && hit.closest('g.draggable[data-role="s1"]') !== s1g)) {
       s1g.classList.remove('text-hover');
       return;
     }
     const pt = getSvgPointFromEvent(e);
     if (!pt) return;
-    const tbx = parseFloat(hit.dataset.tbx);
-    const tby = parseFloat(hit.dataset.tby);
-    const tbw = parseFloat(hit.dataset.tbw);
-    const tbh = parseFloat(hit.dataset.tbh);
+    const hitEl = hit || s1g.querySelector('.text-hit');
+    if (!hitEl) return;
+    const tbx = parseFloat(hitEl.dataset.tbx);
+    const tby = parseFloat(hitEl.dataset.tby);
+    const tbw = parseFloat(hitEl.dataset.tbw);
+    const tbh = parseFloat(hitEl.dataset.tbh);
     if (!isFinite(tbx) || !isFinite(tby)) return;
     const midX = tbx + tbw / 2;
     const midY = tby + tbh / 2;
-    const cornerX = pt.x < midX ? tbx : tbx + tbw;
-    const cornerY = pt.y < midY ? tby : tby + tbh;
+    const isLeft = pt.x < midX;
+    const isTop = pt.y < midY;
+    const offset = 6;
+    const cornerX = isLeft ? tbx - offset : tbx + tbw + offset;
+    const cornerY = isTop ? tby - offset : tby + tbh + offset;
     anchorEl.setAttribute('cx', cornerX);
     anchorEl.setAttribute('cy', cornerY);
+    anchorEl.dataset.cornerX = isLeft ? 'left' : 'right';
+    anchorEl.dataset.cornerY = isTop ? 'top' : 'bottom';
     s1g.classList.add('text-hover');
   }
   function hidePatternAnchor() {
+    if (drag && drag.role === 'text-resize') return;
     const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
     if (s1g) s1g.classList.remove('text-hover');
   }
