@@ -738,10 +738,17 @@
 
   const patternState = {
     inputs: snapshotInputs(patternInputs),
+    W: W, H: H, COUNT: COUNT, FS: FS, TEXT1: TEXT1, TEXT2: TEXT2,
     s1: null, s2: null, pat: null, lastFilled: [], seed: seed, currentSq: 0,
   };
   const layoutState = {
     inputs: snapshotInputs(layoutInputs),
+    W: W, H: H,
+    TITLE_TEXT: TITLE_TEXT, TITLE_FS: TITLE_FS, TITLE_PAD: TITLE_PAD,
+    LOGO_H: LOGO_H, SWAP: SWAP,
+    FOOT_ENABLED: FOOT_ENABLED, FOOT_TEXT: FOOT_TEXT,
+    FOOT_FS: FOOT_FS, FOOT_PAD: FOOT_PAD,
+    FIT: FIT, SCALE: SCALE,
     imgPos: null, IMG_SRC: null, IMG_NATURAL: { w: 0, h: 0 }, fileName: fileName.textContent,
   };
 
@@ -779,9 +786,12 @@
       const name = btn.dataset.tab;
       if (name === activeTab) return;
 
-      // Snapshot current tab (deep-cloned to avoid shared references)
+      // Snapshot current tab — deep-cloned, no shared references
       if (activeTab === 'pattern') {
         patternState.inputs = deepClone(snapshotInputs(patternInputs));
+        patternState.W = W; patternState.H = H;
+        patternState.COUNT = COUNT; patternState.FS = FS;
+        patternState.TEXT1 = TEXT1; patternState.TEXT2 = TEXT2;
         patternState.s1 = deepClone(s1);
         patternState.s2 = deepClone(s2);
         patternState.pat = deepClone(pat);
@@ -790,6 +800,18 @@
         patternState.currentSq = currentSq;
       } else {
         layoutState.inputs = deepClone(snapshotInputs(layoutInputs));
+        layoutState.W = W; layoutState.H = H;
+        layoutState.TITLE_TEXT = TITLE_TEXT;
+        layoutState.TITLE_FS = TITLE_FS;
+        layoutState.TITLE_PAD = TITLE_PAD;
+        layoutState.LOGO_H = LOGO_H;
+        layoutState.SWAP = SWAP;
+        layoutState.FOOT_ENABLED = FOOT_ENABLED;
+        layoutState.FOOT_TEXT = FOOT_TEXT;
+        layoutState.FOOT_FS = FOOT_FS;
+        layoutState.FOOT_PAD = FOOT_PAD;
+        layoutState.FIT = FIT;
+        layoutState.SCALE = SCALE;
         layoutState.imgPos = deepClone(imgPos);
         layoutState.IMG_SRC = IMG_SRC;
         layoutState.IMG_NATURAL = deepClone(IMG_NATURAL);
@@ -798,10 +820,15 @@
 
       activeTab = name;
 
-      // Restore target tab (deep-cloned so live vars don't mutate saved state)
+      // Restore target tab from its own independent state
       if (name === 'pattern') {
         restoreInputs(patternInputs, deepClone(patternState.inputs));
-        syncPatternVars();
+        W = patternState.W; H = patternState.H;
+        COUNT = patternState.COUNT; FS = patternState.FS;
+        TEXT1 = patternState.TEXT1; TEXT2 = patternState.TEXT2;
+        wIn.value = W; hIn.value = H;
+        cVal.textContent = COUNT;
+        fsVal.textContent = FS + ' px';
         s1 = deepClone(patternState.s1);
         s2 = deepClone(patternState.s2);
         pat = deepClone(patternState.pat);
@@ -810,7 +837,24 @@
         currentSq = patternState.currentSq;
       } else {
         restoreInputs(layoutInputs, deepClone(layoutState.inputs));
-        syncLayoutVars();
+        W = layoutState.W; H = layoutState.H;
+        TITLE_TEXT = layoutState.TITLE_TEXT;
+        TITLE_FS = layoutState.TITLE_FS;
+        TITLE_PAD = layoutState.TITLE_PAD;
+        LOGO_H = layoutState.LOGO_H;
+        SWAP = layoutState.SWAP;
+        FOOT_ENABLED = layoutState.FOOT_ENABLED;
+        FOOT_TEXT = layoutState.FOOT_TEXT;
+        FOOT_FS = layoutState.FOOT_FS;
+        FOOT_PAD = layoutState.FOOT_PAD;
+        FIT = layoutState.FIT;
+        SCALE = layoutState.SCALE;
+        titleFsVal.textContent = TITLE_FS + ' px';
+        titlePadVal.textContent = TITLE_PAD + ' px';
+        logoHVal.textContent = LOGO_H + ' px';
+        footFsVal.textContent = FOOT_FS + ' px';
+        footPadVal.textContent = FOOT_PAD + ' px';
+        scaleVal.textContent = SCALE + ' %';
         imgPos = deepClone(layoutState.imgPos);
         IMG_SRC = layoutState.IMG_SRC;
         IMG_NATURAL = deepClone(layoutState.IMG_NATURAL) || { w: 0, h: 0 };
