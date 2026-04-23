@@ -730,6 +730,12 @@
     }
   }
 
+  function deepClone(v) {
+    if (v == null || typeof v !== 'object') return v;
+    try { return structuredClone(v); } catch (_) {}
+    try { return JSON.parse(JSON.stringify(v)); } catch (_) { return v; }
+  }
+
   const patternState = {
     inputs: snapshotInputs(patternInputs),
     s1: null, s2: null, pat: null, lastFilled: [], seed: seed, currentSq: 0,
@@ -773,35 +779,41 @@
       const name = btn.dataset.tab;
       if (name === activeTab) return;
 
-      // Snapshot current tab
+      // Snapshot current tab (deep-cloned to avoid shared references)
       if (activeTab === 'pattern') {
-        patternState.inputs = snapshotInputs(patternInputs);
-        patternState.s1 = s1; patternState.s2 = s2; patternState.pat = pat;
-        patternState.lastFilled = lastFilled; patternState.seed = seed;
+        patternState.inputs = deepClone(snapshotInputs(patternInputs));
+        patternState.s1 = deepClone(s1);
+        patternState.s2 = deepClone(s2);
+        patternState.pat = deepClone(pat);
+        patternState.lastFilled = deepClone(lastFilled);
+        patternState.seed = seed;
         patternState.currentSq = currentSq;
       } else {
-        layoutState.inputs = snapshotInputs(layoutInputs);
-        layoutState.imgPos = imgPos;
+        layoutState.inputs = deepClone(snapshotInputs(layoutInputs));
+        layoutState.imgPos = deepClone(imgPos);
         layoutState.IMG_SRC = IMG_SRC;
-        layoutState.IMG_NATURAL = IMG_NATURAL;
+        layoutState.IMG_NATURAL = deepClone(IMG_NATURAL);
         layoutState.fileName = fileName.textContent;
       }
 
       activeTab = name;
 
-      // Restore target tab
+      // Restore target tab (deep-cloned so live vars don't mutate saved state)
       if (name === 'pattern') {
-        restoreInputs(patternInputs, patternState.inputs);
+        restoreInputs(patternInputs, deepClone(patternState.inputs));
         syncPatternVars();
-        s1 = patternState.s1; s2 = patternState.s2; pat = patternState.pat;
-        lastFilled = patternState.lastFilled; seed = patternState.seed;
+        s1 = deepClone(patternState.s1);
+        s2 = deepClone(patternState.s2);
+        pat = deepClone(patternState.pat);
+        lastFilled = deepClone(patternState.lastFilled) || [];
+        seed = patternState.seed;
         currentSq = patternState.currentSq;
       } else {
-        restoreInputs(layoutInputs, layoutState.inputs);
+        restoreInputs(layoutInputs, deepClone(layoutState.inputs));
         syncLayoutVars();
-        imgPos = layoutState.imgPos;
+        imgPos = deepClone(layoutState.imgPos);
         IMG_SRC = layoutState.IMG_SRC;
-        IMG_NATURAL = layoutState.IMG_NATURAL;
+        IMG_NATURAL = deepClone(layoutState.IMG_NATURAL) || { w: 0, h: 0 };
         fileName.textContent = layoutState.fileName;
       }
 
