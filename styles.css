@@ -717,6 +717,7 @@ body.light-theme .switch input:checked + .switch-slider {
 }
 #canvas g.draggable[data-role="s1"].text-hover .anchor-indicator {
   opacity: 1;
+  pointer-events: all;
 }
 
 /* Inline text editor overlay on canvas */

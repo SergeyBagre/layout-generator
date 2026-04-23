@@ -878,7 +878,7 @@
   canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
 
   [canvasPattern, canvasLayout].forEach(c => {
-    c.addEventListener('pointerdown', onPointerDown);
+    c.addEventListener('pointerdown', onPointerDown, true);
     c.addEventListener('pointermove', onPointerMove);
     c.addEventListener('pointerup', endDrag);
     c.addEventListener('pointercancel', endDrag);
