@@ -7,7 +7,8 @@
   const fsVal = document.getElementById('fsVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
-  const showTextIn = document.getElementById('showTextInput');
+  const textEnabledIn = document.getElementById('textEnabledInput');
+  const textControlsEl = document.getElementById('textControls');
 
   // Layout-only independent inputs (no shared implementation with pattern)
   const wInLayout = document.getElementById('wInputLayout');
@@ -46,7 +47,7 @@
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
-  let SHOW_TEXT = showTextIn.checked;
+  let TEXT_ENABLED = textEnabledIn.checked;
 
   // Layout-only independent state (not shared with pattern)
   let W_L = +wInLayout.value, H_L = +hInLayout.value;
@@ -417,8 +418,8 @@
     let specialDefs;
     if (activeTab === 'pattern') {
       specialDefs = [
-        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq, fsSize: FS, showText: SHOW_TEXT },
-        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq, fsSize: FS, showText: SHOW_TEXT }
+        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq, fsSize: FS, showText: TEXT_ENABLED },
+        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq, fsSize: FS, showText: TEXT_ENABLED }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       specialDefs = [
@@ -774,7 +775,21 @@
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
-  showTextIn.addEventListener('change', () => { SHOW_TEXT = showTextIn.checked; redraw(); });
+
+  function applyTextEnabledUI() {
+    textControlsEl.classList.toggle('disabled', !TEXT_ENABLED);
+    text1In.disabled = !TEXT_ENABLED;
+    text2In.disabled = !TEXT_ENABLED;
+    text1In.readOnly = !TEXT_ENABLED;
+    text2In.readOnly = !TEXT_ENABLED;
+    fsIn.disabled = !TEXT_ENABLED;
+  }
+  textEnabledIn.addEventListener('change', () => {
+    TEXT_ENABLED = textEnabledIn.checked;
+    applyTextEnabledUI();
+    redraw();
+  });
+  applyTextEnabledUI();
 
   // Independent layout-tab listeners (not shared with pattern tab)
   cInLayout.addEventListener('input', () => {
