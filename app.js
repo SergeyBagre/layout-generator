@@ -7,6 +7,7 @@
   const fsVal = document.getElementById('fsVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
+  const showTextIn = document.getElementById('showTextInput');
 
   // Layout-only independent inputs (no shared implementation with pattern)
   const wInLayout = document.getElementById('wInputLayout');
@@ -45,6 +46,7 @@
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
+  let SHOW_TEXT = showTextIn.checked;
 
   // Layout-only independent state (not shared with pattern)
   let W_L = +wInLayout.value, H_L = +hInLayout.value;
@@ -415,18 +417,18 @@
     let specialDefs;
     if (activeTab === 'pattern') {
       specialDefs = [
-        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq, fsSize: FS },
-        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq, fsSize: FS }
+        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq, fsSize: FS, showText: SHOW_TEXT },
+        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq, fsSize: FS, showText: SHOW_TEXT }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       specialDefs = [
-        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L },
-        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L }
+        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L, showText: true },
+        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L, showText: true }
       ];
     } else {
       specialDefs = [];
     }
-    specialDefs.forEach(({ sp, lines, textPos, role, isFirst, sqSize, fsSize }) => {
+    specialDefs.forEach(({ sp, lines, textPos, role, isFirst, sqSize, fsSize, showText }) => {
       const sq = sqSize;
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
@@ -457,19 +459,21 @@
         case 'bottom-right': tx = sp.x + sq - margin; ty = sp.y + sq - totalH - margin + fs * 0.9; anchor = 'end'; break;
         default: tx = sp.x + sq / 2; ty = sp.y + (sq - totalH) / 2 + fs * 0.9; anchor = 'middle';
       }
-      lines.forEach((line, i) => {
-        const t = document.createElementNS(svgNS, 'text');
-        t.setAttribute('x', tx);
-        t.setAttribute('y', ty + i * lineH);
-        t.setAttribute('text-anchor', anchor);
-        t.setAttribute('fill', 'white');
-        t.setAttribute('font-size', fs);
-        t.setAttribute('font-family', 'Inter, sans-serif');
-        t.setAttribute('font-weight', '400');
-        t.setAttribute('pointer-events', 'none');
-        t.textContent = line;
-        g.appendChild(t);
-      });
+      if (showText) {
+        lines.forEach((line, i) => {
+          const t = document.createElementNS(svgNS, 'text');
+          t.setAttribute('x', tx);
+          t.setAttribute('y', ty + i * lineH);
+          t.setAttribute('text-anchor', anchor);
+          t.setAttribute('fill', 'white');
+          t.setAttribute('font-size', fs);
+          t.setAttribute('font-family', 'Inter, sans-serif');
+          t.setAttribute('font-weight', '400');
+          t.setAttribute('pointer-events', 'none');
+          t.textContent = line;
+          g.appendChild(t);
+        });
+      }
       root.appendChild(g);
 
       // Random button INSIDE square 1 (lives with it, gets omitted on export)
@@ -770,6 +774,7 @@
   fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
+  showTextIn.addEventListener('change', () => { SHOW_TEXT = showTextIn.checked; redraw(); });
 
   // Independent layout-tab listeners (not shared with pattern tab)
   cInLayout.addEventListener('input', () => {
