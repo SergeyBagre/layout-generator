@@ -108,6 +108,7 @@
   // Per-square overrides (pattern only). null = use computed defaults (global sq / FS).
   let s1Size = null, s2Size = null;
   let s1Fs = null, s2Fs = null;
+  let s1TextPos = null, s2TextPos = null;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
@@ -425,9 +426,11 @@
       const sq2 = sq;
       const fs1 = s1Fs != null ? s1Fs : FS;
       const fs2 = fs1;
+      const tp1 = s1TextPos || pat.text1;
+      const tp2 = s2TextPos || pat.text2;
       specialDefs = [
-        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq1, fsSize: fs1, showText: TEXT_ENABLED, patternHandles: true, textRole: 'text1', isMaster: true },
-        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text2', isMaster: false }
+        { sp: s1, lines: TEXT1.split('\n'), textPos: tp1, role: 's1', isFirst: true, sqSize: sq1, fsSize: fs1, showText: TEXT_ENABLED, patternHandles: true, textRole: 'text1', isMaster: true },
+        { sp: s2, lines: TEXT2.split('\n'), textPos: tp2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text2', isMaster: false }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       specialDefs = [
@@ -914,6 +917,48 @@
     c.addEventListener('pointerup', endDrag);
     c.addEventListener('pointercancel', endDrag);
   });
+
+  const cornerCycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+  const textAlignMap = {
+    'top-left': 'left', 'bottom-left': 'left',
+    'top-right': 'right', 'bottom-right': 'right',
+  };
+  let clickTimer = null;
+  canvasPattern.addEventListener('click', (e) => {
+    if (activeTab !== 'pattern') return;
+    if (e.detail && e.detail > 1) return;
+    const hit = e.target.closest('.text-hit');
+    if (!hit) return;
+    if (e.target.closest('.anchor-indicator') || e.target.closest('.random-btn')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      const textRole = hit.dataset.textRole;
+      const getCurrent = () => textRole === 'text1'
+        ? (s1TextPos || pat.text1)
+        : (s2TextPos || pat.text2);
+      const getBlocked = () => textRole === 'text1'
+        ? (s2TextPos || pat.text2)
+        : (s1TextPos || pat.text1);
+      const current = getCurrent();
+      const blocked = getBlocked();
+      let idx = cornerCycle.indexOf(current);
+      if (idx < 0) idx = 0;
+      for (let i = 1; i <= cornerCycle.length; i++) {
+        const next = cornerCycle[(idx + i) % cornerCycle.length];
+        if (next === blocked) continue;
+        if (textRole === 'text1') s1TextPos = next;
+        else s2TextPos = next;
+        break;
+      }
+      redraw();
+    }, 220);
+  });
+  canvasPattern.addEventListener('dblclick', () => {
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+  }, true);
 
   // Pattern: inline text edit on double-click
   canvasPattern.addEventListener('dblclick', (e) => {
