@@ -700,14 +700,117 @@
   logoHVal.textContent = LOGO_H + ' px';
   footFsVal.textContent = FOOT_FS + ' px';
   footPadVal.textContent = FOOT_PAD + ' px';
-  // Tabs
+  // Tabs with independent state
+  const patternInputs = {
+    wInput: wIn, hInput: hIn, cInput: cIn, fsInput: fsIn,
+    text1Input: text1In, text2Input: text2In,
+  };
+  const layoutInputs = {
+    titleInput: titleIn, titleFsInput: titleFsIn, titlePadInput: titlePadIn,
+    logoHInput: logoHIn, swapInput: swapIn,
+    footEnabledInput: footEnabledIn, footInput: footIn,
+    footFsInput: footFsIn, footPadInput: footPadIn,
+    fitSelect: fitSelect, scaleInput: scaleInput,
+  };
+
+  function snapshotInputs(inputs) {
+    const snap = {};
+    for (const k in inputs) {
+      const el = inputs[k];
+      snap[k] = (el.type === 'checkbox') ? el.checked : el.value;
+    }
+    return snap;
+  }
+  function restoreInputs(inputs, snap) {
+    for (const k in inputs) {
+      const el = inputs[k];
+      if (!(k in snap)) continue;
+      if (el.type === 'checkbox') el.checked = snap[k];
+      else el.value = snap[k];
+    }
+  }
+
+  const patternState = {
+    inputs: snapshotInputs(patternInputs),
+    s1: null, s2: null, pat: null, lastFilled: [], seed: seed, currentSq: 0,
+  };
+  const layoutState = {
+    inputs: snapshotInputs(layoutInputs),
+    imgPos: null, IMG_SRC: null, IMG_NATURAL: { w: 0, h: 0 }, fileName: fileName.textContent,
+  };
+
+  let activeTab = 'pattern';
+
+  function syncPatternVars() {
+    W = +wIn.value; H = +hIn.value; COUNT = +cIn.value; FS = +fsIn.value;
+    TEXT1 = text1In.value; TEXT2 = text2In.value;
+    wIn.value = W; hIn.value = H;
+    cVal.textContent = COUNT;
+    fsVal.textContent = FS + ' px';
+  }
+  function syncLayoutVars() {
+    TITLE_TEXT = titleIn.value;
+    TITLE_FS = +titleFsIn.value;
+    TITLE_PAD = +titlePadIn.value;
+    LOGO_H = +logoHIn.value;
+    SWAP = swapIn.checked;
+    FOOT_ENABLED = footEnabledIn.checked;
+    FOOT_TEXT = footIn.value;
+    FOOT_FS = +footFsIn.value;
+    FOOT_PAD = +footPadIn.value;
+    FIT = fitSelect.value;
+    SCALE = +scaleInput.value;
+    titleFsVal.textContent = TITLE_FS + ' px';
+    titlePadVal.textContent = TITLE_PAD + ' px';
+    logoHVal.textContent = LOGO_H + ' px';
+    footFsVal.textContent = FOOT_FS + ' px';
+    footPadVal.textContent = FOOT_PAD + ' px';
+    scaleVal.textContent = SCALE + ' %';
+  }
+
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const name = btn.dataset.tab;
+      if (name === activeTab) return;
+
+      // Snapshot current tab
+      if (activeTab === 'pattern') {
+        patternState.inputs = snapshotInputs(patternInputs);
+        patternState.s1 = s1; patternState.s2 = s2; patternState.pat = pat;
+        patternState.lastFilled = lastFilled; patternState.seed = seed;
+        patternState.currentSq = currentSq;
+      } else {
+        layoutState.inputs = snapshotInputs(layoutInputs);
+        layoutState.imgPos = imgPos;
+        layoutState.IMG_SRC = IMG_SRC;
+        layoutState.IMG_NATURAL = IMG_NATURAL;
+        layoutState.fileName = fileName.textContent;
+      }
+
+      activeTab = name;
+
+      // Restore target tab
+      if (name === 'pattern') {
+        restoreInputs(patternInputs, patternState.inputs);
+        syncPatternVars();
+        s1 = patternState.s1; s2 = patternState.s2; pat = patternState.pat;
+        lastFilled = patternState.lastFilled; seed = patternState.seed;
+        currentSq = patternState.currentSq;
+      } else {
+        restoreInputs(layoutInputs, layoutState.inputs);
+        syncLayoutVars();
+        imgPos = layoutState.imgPos;
+        IMG_SRC = layoutState.IMG_SRC;
+        IMG_NATURAL = layoutState.IMG_NATURAL;
+        fileName.textContent = layoutState.fileName;
+      }
+
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.tab-panel').forEach(p => {
         p.classList.toggle('active', p.dataset.tabContent === name);
       });
+
+      redraw();
     });
   });
 

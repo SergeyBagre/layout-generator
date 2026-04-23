@@ -13,8 +13,22 @@
   <div class="app">
     <aside class="sidebar">
       <div class="tabs">
-        <button class="tab active" type="button" data-tab="pattern">Паттерн</button>
-        <button class="tab" type="button" data-tab="layout">Макет</button>
+        <button class="tab active" type="button" data-tab="pattern">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="5" height="5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="9" y="2" width="5" height="5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="2" y="9" width="5" height="5" stroke="currentColor" stroke-width="1.3"/>
+            <rect x="9" y="9" width="5" height="5" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+          <span>Паттерн</span>
+        </button>
+        <button class="tab" type="button" data-tab="layout">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M2 6h12M6 6v8" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+          <span>Макет</span>
+        </button>
       </div>
 
       <div class="tab-panel active" data-tab-content="pattern">

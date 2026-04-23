@@ -57,6 +57,10 @@ html, body {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .tab:hover { color: rgba(255, 255, 255, 0.8); }
