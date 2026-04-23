@@ -111,6 +111,8 @@
   let s1Size = null, s2Size = null;
   let s1Fs = null, s2Fs = null;
   let s1TextPos = null, s2TextPos = null;
+  let s1TextPos_L = null, s2TextPos_L = null;
+  let s1Fs_L = null;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
@@ -435,9 +437,13 @@
         { sp: s2, lines: TEXT2.split('\n'), textPos: tp2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text2', isMaster: false }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
+      const fs1_L = s1Fs_L != null ? s1Fs_L : FS_L;
+      const fs2_L = fs1_L;
+      const tp1_L = s1TextPos_L || pat_L.text1;
+      const tp2_L = s2TextPos_L || pat_L.text2;
       specialDefs = [
-        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L, showText: TEXT_ENABLED_L, patternHandles: false },
-        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L, showText: TEXT_ENABLED_L, patternHandles: false }
+        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: tp1_L, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: fs1_L, showText: TEXT_ENABLED_L, patternHandles: true, textRole: 'text1', isMaster: true },
+        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: tp2_L, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: fs2_L, showText: TEXT_ENABLED_L, patternHandles: false, textRole: 'text2', isMaster: false }
       ];
     } else {
       specialDefs = [];
@@ -774,16 +780,25 @@
     if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
-    if (drag.role === 'text-resize' && activeTab === 'pattern') {
+    if (drag.role === 'text-resize') {
       const dx = pt.x - drag.startPt.x;
       const dy = pt.y - drag.startPt.y;
       const signed = drag.signX * dx + drag.signY * dy;
       const newFs = clamp(Math.round(drag.startFs + signed), 8, 120);
-      if (newFs !== s1Fs) {
-        s1Fs = newFs;
-        FS = newFs;
-        drag.moved = true;
-        redraw();
+      if (activeTab === 'pattern') {
+        if (newFs !== s1Fs) {
+          s1Fs = newFs;
+          FS = newFs;
+          drag.moved = true;
+          redraw();
+        }
+      } else if (activeTab === 'layout') {
+        if (newFs !== s1Fs_L) {
+          s1Fs_L = newFs;
+          FS_L = newFs;
+          drag.moved = true;
+          redraw();
+        }
       }
       return;
     }
@@ -818,13 +833,15 @@
       return;
     }
 
-    if (activeTab === 'pattern') {
+    {
       const anchorTarget = e.target.closest('.anchor-indicator');
       if (anchorTarget) {
         e.preventDefault();
         e.stopPropagation();
         const pt = getSvgPointFromEvent(e); if (!pt) return;
-        const curFs = s1Fs != null ? s1Fs : FS;
+        const curFs = activeTab === 'pattern'
+          ? (s1Fs != null ? s1Fs : FS)
+          : (s1Fs_L != null ? s1Fs_L : FS_L);
         const signX = anchorTarget.dataset.cornerX === 'left' ? -1 : 1;
         const signY = anchorTarget.dataset.cornerY === 'top' ? -1 : 1;
         try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -837,7 +854,8 @@
           signY: signY,
           ownerTab: activeTab,
         };
-        const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+        const s1role = activeTab === 'pattern' ? 's1' : 's1_L';
+        const s1g = canvas.querySelector(`g.draggable[data-role="${s1role}"]`);
         if (s1g) s1g.classList.add('text-hover');
         return;
       }
@@ -851,11 +869,19 @@
     if (textHitTarget) {
       try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
       const role = target ? target.dataset.role : null;
+      let ox = 0, oy = 0, dragRole = null;
+      if (activeTab === 'pattern') {
+        if (role === 's1' && s1) { dragRole = 's1'; ox = pt.x - s1.x; oy = pt.y - s1.y; }
+        else if (role === 's2' && s2) { dragRole = 's2'; ox = pt.x - s2.x; oy = pt.y - s2.y; }
+      } else if (activeTab === 'layout') {
+        if (role === 's1_L' && s1_L) { dragRole = 's1_L'; ox = pt.x - s1_L.x; oy = pt.y - s1_L.y; }
+        else if (role === 's2_L' && s2_L) { dragRole = 's2_L'; ox = pt.x - s2_L.x; oy = pt.y - s2_L.y; }
+      }
       drag = {
-        role: role === 's1' ? 's1' : role === 's2' ? 's2' : null,
+        role: dragRole,
         pointerId: e.pointerId,
-        offsetX: role === 's1' && s1 ? pt.x - s1.x : role === 's2' && s2 ? pt.x - s2.x : 0,
-        offsetY: role === 's1' && s1 ? pt.y - s1.y : role === 's2' && s2 ? pt.y - s2.y : 0,
+        offsetX: ox,
+        offsetY: oy,
         ownerTab: activeTab,
         startPt: pt,
         textHit: textHitTarget,
@@ -893,38 +919,69 @@
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
     if (wasTextResize) {
-      const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+      const activeCanvas = activeTab === 'pattern' ? canvasPattern : canvasLayout;
+      const s1role = activeTab === 'pattern' ? 's1' : 's1_L';
+      const s1g = activeCanvas.querySelector(`g.draggable[data-role="${s1role}"]`);
       if (s1g) s1g.classList.remove('text-hover');
     }
-    if (wasPendingClick && clickHit && activeTab === 'pattern' && (!e.detail || e.detail < 2)) {
+    if (wasPendingClick && clickHit && (!e.detail || e.detail < 2)) {
       const textRole = clickHit.dataset.textRole;
       const cycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
-      const sq = currentSq;
-      const ownSp = textRole === 'text1' ? s1 : s2;
-      const otherSp = textRole === 'text1' ? s2 : s1;
-      const cornerPoint = (sp, pos) => {
-        switch (pos) {
-          case 'top-left': return { x: sp.x, y: sp.y };
-          case 'top-right': return { x: sp.x + sq, y: sp.y };
-          case 'bottom-left': return { x: sp.x, y: sp.y + sq };
-          case 'bottom-right': return { x: sp.x + sq, y: sp.y + sq };
+      if (activeTab === 'pattern') {
+        const sq = currentSq;
+        const ownSp = textRole === 'text1' ? s1 : s2;
+        const otherSp = textRole === 'text1' ? s2 : s1;
+        const cornerPoint = (sp, pos) => {
+          switch (pos) {
+            case 'top-left': return { x: sp.x, y: sp.y };
+            case 'top-right': return { x: sp.x + sq, y: sp.y };
+            case 'bottom-left': return { x: sp.x, y: sp.y + sq };
+            case 'bottom-right': return { x: sp.x + sq, y: sp.y + sq };
+          }
+          return { x: sp.x, y: sp.y };
+        };
+        const inOther = (p) => p.x > otherSp.x && p.x < otherSp.x + sq && p.y > otherSp.y && p.y < otherSp.y + sq;
+        const current = textRole === 'text1'
+          ? (s1TextPos || pat.text1)
+          : (s2TextPos || pat.text2);
+        let idx = cycle.indexOf(current);
+        if (idx < 0) idx = 0;
+        for (let i = 1; i <= cycle.length; i++) {
+          const next = cycle[(idx + i) % cycle.length];
+          if (inOther(cornerPoint(ownSp, next))) continue;
+          if (textRole === 'text1') s1TextPos = next;
+          else s2TextPos = next;
+          break;
         }
-        return { x: sp.x, y: sp.y };
-      };
-      const inOther = (p) => p.x > otherSp.x && p.x < otherSp.x + sq && p.y > otherSp.y && p.y < otherSp.y + sq;
-      const current = textRole === 'text1'
-        ? (s1TextPos || pat.text1)
-        : (s2TextPos || pat.text2);
-      let idx = cycle.indexOf(current);
-      if (idx < 0) idx = 0;
-      for (let i = 1; i <= cycle.length; i++) {
-        const next = cycle[(idx + i) % cycle.length];
-        if (inOther(cornerPoint(ownSp, next))) continue;
-        if (textRole === 'text1') s1TextPos = next;
-        else s2TextPos = next;
-        break;
+        redraw();
+      } else if (activeTab === 'layout') {
+        const sq = currentSq_L;
+        const ownSp = textRole === 'text1' ? s1_L : s2_L;
+        const otherSp = textRole === 'text1' ? s2_L : s1_L;
+        const cornerPoint = (sp, pos) => {
+          switch (pos) {
+            case 'top-left': return { x: sp.x, y: sp.y };
+            case 'top-right': return { x: sp.x + sq, y: sp.y };
+            case 'bottom-left': return { x: sp.x, y: sp.y + sq };
+            case 'bottom-right': return { x: sp.x + sq, y: sp.y + sq };
+          }
+          return { x: sp.x, y: sp.y };
+        };
+        const inOther = (p) => p.x > otherSp.x && p.x < otherSp.x + sq && p.y > otherSp.y && p.y < otherSp.y + sq;
+        const current = textRole === 'text1'
+          ? (s1TextPos_L || pat_L.text1)
+          : (s2TextPos_L || pat_L.text2);
+        let idx = cycle.indexOf(current);
+        if (idx < 0) idx = 0;
+        for (let i = 1; i <= cycle.length; i++) {
+          const next = cycle[(idx + i) % cycle.length];
+          if (inOther(cornerPoint(ownSp, next))) continue;
+          if (textRole === 'text1') s1TextPos_L = next;
+          else s2TextPos_L = next;
+          break;
+        }
+        redraw();
       }
-      redraw();
     }
   };
   // Pattern hover-only anchor indicator.
@@ -934,18 +991,25 @@
   function cancelAnchorHide() {
     if (anchorHideTimer) { clearTimeout(anchorHideTimer); anchorHideTimer = null; }
   }
+  function activeS1Role() {
+    return activeTab === 'pattern' ? 's1' : 's1_L';
+  }
+  function activeCanvasEl() {
+    return activeTab === 'pattern' ? canvasPattern : canvasLayout;
+  }
   function scheduleAnchorHide() {
     cancelAnchorHide();
     anchorHideTimer = setTimeout(() => {
       anchorHideTimer = null;
       if (drag && drag.role === 'text-resize') return;
-      const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+      const s1g = activeCanvasEl().querySelector(`g.draggable[data-role="${activeS1Role()}"]`);
       if (s1g) s1g.classList.remove('text-hover');
     }, 250);
   }
   function updatePatternAnchor(e) {
-    if (activeTab !== 'pattern') return;
-    const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+    const cEl = activeCanvasEl();
+    const s1role = activeS1Role();
+    const s1g = cEl.querySelector(`g.draggable[data-role="${s1role}"]`);
     if (!s1g) return;
     const anchorEl = s1g.querySelector('.anchor-indicator');
     if (!anchorEl) return;
@@ -956,7 +1020,7 @@
     }
     const hit = e.target.closest('.text-hit');
     const onAnchor = e.target.closest('.anchor-indicator');
-    const hitInS1 = hit && hit.closest('g.draggable[data-role="s1"]') === s1g;
+    const hitInS1 = hit && hit.closest(`g.draggable[data-role="${s1role}"]`) === s1g;
     if (!hitInS1 && !onAnchor) {
       scheduleAnchorHide();
       return;
@@ -970,6 +1034,8 @@
   }
   canvasPattern.addEventListener('pointermove', updatePatternAnchor);
   canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
+  canvasLayout.addEventListener('pointermove', updatePatternAnchor);
+  canvasLayout.addEventListener('pointerleave', hidePatternAnchor);
 
   [canvasPattern, canvasLayout].forEach(c => {
     c.addEventListener('pointerdown', onPointerDown, true);
@@ -980,55 +1046,64 @@
 
   const cornerCycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
 
-  // Pattern: inline text edit on double-click
-  canvasPattern.addEventListener('dblclick', (e) => {
-    if (activeTab !== 'pattern') return;
-    const hit = e.target.closest('.text-hit');
-    if (!hit) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const textRole = hit.dataset.textRole;
-    const sourceInput = textRole === 'text1' ? text1In : text2In;
-    const getText = () => textRole === 'text1' ? TEXT1 : TEXT2;
-    const setText = (v) => {
-      if (textRole === 'text1') { TEXT1 = v; text1In.value = v; }
-      else { TEXT2 = v; text2In.value = v; }
-    };
-    // Compute screen rect of the hit region
-    const rect = hit.getBoundingClientRect();
-    const editor = document.createElement('textarea');
-    editor.className = 'inline-text-editor';
-    editor.value = getText();
-    editor.style.position = 'fixed';
-    editor.style.left = rect.left + 'px';
-    editor.style.top = rect.top + 'px';
-    editor.style.width = Math.max(80, rect.width) + 'px';
-    editor.style.height = Math.max(40, rect.height) + 'px';
-    const fs = textRole === 'text1' ? (s1Fs != null ? s1Fs : FS) : (s2Fs != null ? s2Fs : FS);
-    // Font size also affected by canvas scale — use rect-derived visual size
-    const visualScale = rect.height / Math.max(1, parseFloat(hit.getAttribute('height')) || hit.getBBox().height);
-    editor.style.fontSize = (fs * visualScale) + 'px';
-    document.body.appendChild(editor);
-    editor.focus();
-    editor.select();
-    const originalValue = getText();
-    let done = false;
-    const save = () => {
-      if (done) return; done = true;
-      setText(editor.value);
-      editor.remove();
-      redraw();
-    };
-    const cancel = () => {
-      if (done) return; done = true;
-      editor.remove();
-    };
-    editor.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); save(); }
-      else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+  function installDblclickEdit(canvasEl) {
+    canvasEl.addEventListener('dblclick', (e) => {
+      const hit = e.target.closest('.text-hit');
+      if (!hit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const textRole = hit.dataset.textRole;
+      const isLayout = activeTab === 'layout';
+      const getText = () => {
+        if (isLayout) return textRole === 'text1' ? TEXT1_L : TEXT2_L;
+        return textRole === 'text1' ? TEXT1 : TEXT2;
+      };
+      const setText = (v) => {
+        if (isLayout) {
+          if (textRole === 'text1') { TEXT1_L = v; text1InLayout.value = v; if (activeTab === 'layout') TEXT1 = v; }
+          else { TEXT2_L = v; text2InLayout.value = v; if (activeTab === 'layout') TEXT2 = v; }
+        } else {
+          if (textRole === 'text1') { TEXT1 = v; text1In.value = v; }
+          else { TEXT2 = v; text2In.value = v; }
+        }
+      };
+      const rect = hit.getBoundingClientRect();
+      const editor = document.createElement('textarea');
+      editor.className = 'inline-text-editor';
+      editor.value = getText();
+      editor.style.position = 'fixed';
+      editor.style.left = rect.left + 'px';
+      editor.style.top = rect.top + 'px';
+      editor.style.width = Math.max(80, rect.width) + 'px';
+      editor.style.height = Math.max(40, rect.height) + 'px';
+      const fs = isLayout
+        ? (s1Fs_L != null ? s1Fs_L : FS_L)
+        : (textRole === 'text1' ? (s1Fs != null ? s1Fs : FS) : (s2Fs != null ? s2Fs : FS));
+      const visualScale = rect.height / Math.max(1, parseFloat(hit.getAttribute('height')) || hit.getBBox().height);
+      editor.style.fontSize = (fs * visualScale) + 'px';
+      document.body.appendChild(editor);
+      editor.focus();
+      editor.select();
+      let done = false;
+      const save = () => {
+        if (done) return; done = true;
+        setText(editor.value);
+        editor.remove();
+        redraw();
+      };
+      const cancel = () => {
+        if (done) return; done = true;
+        editor.remove();
+      };
+      editor.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); save(); }
+        else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+      });
+      editor.addEventListener('blur', save);
     });
-    editor.addEventListener('blur', save);
-  });
+  }
+  installDblclickEdit(canvasPattern);
+  installDblclickEdit(canvasLayout);
 
   // Collapsible panels
   document.querySelectorAll('.panel').forEach(panel => {
