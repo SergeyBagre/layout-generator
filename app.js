@@ -490,7 +490,7 @@
         });
       }
 
-      if (patternHandles && showText && TEXT_ENABLED) {
+      if (showText && TEXT_ENABLED && (role === 's1' || role === 's2')) {
         root.appendChild(g);
         svg.appendChild(root);
         const oldForMeasure = canvas.firstChild;
@@ -535,7 +535,7 @@
         textHit.setAttribute('fill', 'transparent');
         textHit.setAttribute('pointer-events', 'all');
         textHit.classList.add('text-hit');
-        textHit.dataset.textRole = 'text1';
+        textHit.dataset.textRole = textRole;
         textHit.dataset.role = 'text-edit';
         textHit.style.cursor = 'text';
         textHit.dataset.export = 'skip';
@@ -543,38 +543,52 @@
         textHit.dataset.tby = tbY;
         textHit.dataset.tbw = tbW;
         textHit.dataset.tbh = tbH;
+        textHit.dataset.textPos = textPos;
         g.appendChild(textHit);
 
-        const indicatorR = Math.max(4, fs * 0.28);
-        const hitR = Math.max(22, indicatorR * 4);
-        const anchorG = document.createElementNS(svgNS, 'g');
-        anchorG.classList.add('anchor-indicator');
-        anchorG.dataset.role = 'text-resize';
-        anchorG.dataset.export = 'skip';
-        anchorG.style.cursor = 'nwse-resize';
-        anchorG.setAttribute('transform', `translate(${tbX}, ${tbY})`);
+        if (patternHandles) {
+          const indicatorR = Math.max(4, fs * 0.28);
+          const hitR = Math.max(22, indicatorR * 4);
+          let ax, ay, cornerXSide, cornerYSide;
+          const offset = 6;
+          switch (textPos) {
+            case 'top-left': ax = tbX - offset; ay = tbY - offset; cornerXSide = 'left'; cornerYSide = 'top'; break;
+            case 'top-right': ax = tbX + tbW + offset; ay = tbY - offset; cornerXSide = 'right'; cornerYSide = 'top'; break;
+            case 'bottom-left': ax = tbX - offset; ay = tbY + tbH + offset; cornerXSide = 'left'; cornerYSide = 'bottom'; break;
+            case 'bottom-right': ax = tbX + tbW + offset; ay = tbY + tbH + offset; cornerXSide = 'right'; cornerYSide = 'bottom'; break;
+            default: ax = tbX - offset; ay = tbY - offset; cornerXSide = 'left'; cornerYSide = 'top';
+          }
+          const anchorG = document.createElementNS(svgNS, 'g');
+          anchorG.classList.add('anchor-indicator');
+          anchorG.dataset.role = 'text-resize';
+          anchorG.dataset.export = 'skip';
+          anchorG.style.cursor = 'nwse-resize';
+          anchorG.setAttribute('transform', `translate(${ax}, ${ay})`);
+          anchorG.dataset.cornerX = cornerXSide;
+          anchorG.dataset.cornerY = cornerYSide;
 
-        const anchorHit = document.createElementNS(svgNS, 'circle');
-        anchorHit.setAttribute('cx', 0);
-        anchorHit.setAttribute('cy', 0);
-        anchorHit.setAttribute('r', hitR);
-        anchorHit.setAttribute('fill', 'transparent');
-        anchorHit.setAttribute('pointer-events', 'all');
-        anchorHit.classList.add('anchor-hit');
-        anchorHit.dataset.export = 'skip';
-        anchorG.appendChild(anchorHit);
+          const anchorHit = document.createElementNS(svgNS, 'circle');
+          anchorHit.setAttribute('cx', 0);
+          anchorHit.setAttribute('cy', 0);
+          anchorHit.setAttribute('r', hitR);
+          anchorHit.setAttribute('fill', 'transparent');
+          anchorHit.setAttribute('pointer-events', 'all');
+          anchorHit.classList.add('anchor-hit');
+          anchorHit.dataset.export = 'skip';
+          anchorG.appendChild(anchorHit);
 
-        const anchorDot = document.createElementNS(svgNS, 'circle');
-        anchorDot.setAttribute('cx', 0);
-        anchorDot.setAttribute('cy', 0);
-        anchorDot.setAttribute('r', indicatorR);
-        anchorDot.setAttribute('fill', '#84A7BA');
-        anchorDot.setAttribute('pointer-events', 'none');
-        anchorDot.classList.add('anchor-dot');
-        anchorDot.dataset.export = 'skip';
-        anchorG.appendChild(anchorDot);
+          const anchorDot = document.createElementNS(svgNS, 'circle');
+          anchorDot.setAttribute('cx', 0);
+          anchorDot.setAttribute('cy', 0);
+          anchorDot.setAttribute('r', indicatorR);
+          anchorDot.setAttribute('fill', '#84A7BA');
+          anchorDot.setAttribute('pointer-events', 'none');
+          anchorDot.classList.add('anchor-dot');
+          anchorDot.dataset.export = 'skip';
+          anchorG.appendChild(anchorDot);
 
-        g.appendChild(anchorG);
+          g.appendChild(anchorG);
+        }
       }
 
       root.appendChild(g);
@@ -875,17 +889,31 @@
     if (wasPendingClick && clickHit && activeTab === 'pattern' && (!e.detail || e.detail < 2)) {
       const textRole = clickHit.dataset.textRole;
       const cycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+      const sq = currentSq;
+      const ownSp = textRole === 'text1' ? s1 : s2;
+      const otherSp = textRole === 'text1' ? s2 : s1;
+      const cornerPoint = (sp, pos) => {
+        switch (pos) {
+          case 'top-left': return { x: sp.x, y: sp.y };
+          case 'top-right': return { x: sp.x + sq, y: sp.y };
+          case 'bottom-left': return { x: sp.x, y: sp.y + sq };
+          case 'bottom-right': return { x: sp.x + sq, y: sp.y + sq };
+        }
+        return { x: sp.x, y: sp.y };
+      };
+      const inOther = (p) => p.x > otherSp.x && p.x < otherSp.x + sq && p.y > otherSp.y && p.y < otherSp.y + sq;
       const current = textRole === 'text1'
         ? (s1TextPos || pat.text1)
         : (s2TextPos || pat.text2);
-      const blocked = textRole === 'text1'
+      const otherCurrent = textRole === 'text1'
         ? (s2TextPos || pat.text2)
         : (s1TextPos || pat.text1);
       let idx = cycle.indexOf(current);
       if (idx < 0) idx = 0;
       for (let i = 1; i <= cycle.length; i++) {
         const next = cycle[(idx + i) % cycle.length];
-        if (next === blocked) continue;
+        if (next === otherCurrent) continue;
+        if (inOther(cornerPoint(ownSp, next))) continue;
         if (textRole === 'text1') s1TextPos = next;
         else s2TextPos = next;
         break;
@@ -922,32 +950,12 @@
     }
     const hit = e.target.closest('.text-hit');
     const onAnchor = e.target.closest('.anchor-indicator');
-    if ((!hit && !onAnchor) || (hit && hit.closest('g.draggable[data-role="s1"]') !== s1g)) {
+    const hitInS1 = hit && hit.closest('g.draggable[data-role="s1"]') === s1g;
+    if (!hitInS1 && !onAnchor) {
       scheduleAnchorHide();
       return;
     }
     cancelAnchorHide();
-    const pt = getSvgPointFromEvent(e);
-    if (!pt) return;
-    const hitEl = hit || s1g.querySelector('.text-hit');
-    if (!hitEl) return;
-    const tbx = parseFloat(hitEl.dataset.tbx);
-    const tby = parseFloat(hitEl.dataset.tby);
-    const tbw = parseFloat(hitEl.dataset.tbw);
-    const tbh = parseFloat(hitEl.dataset.tbh);
-    if (!isFinite(tbx) || !isFinite(tby)) return;
-    const midX = tbx + tbw / 2;
-    const midY = tby + tbh / 2;
-    const isLeft = pt.x < midX;
-    const isTop = pt.y < midY;
-    const offset = 6;
-    const cornerX = isLeft ? tbx - offset : tbx + tbw + offset;
-    const cornerY = isTop ? tby - offset : tby + tbh + offset;
-    if (!onAnchor) {
-      anchorEl.setAttribute('transform', `translate(${cornerX}, ${cornerY})`);
-      anchorEl.dataset.cornerX = isLeft ? 'left' : 'right';
-      anchorEl.dataset.cornerY = isTop ? 'top' : 'bottom';
-    }
     s1g.classList.add('text-hover');
   }
   function hidePatternAnchor() {
