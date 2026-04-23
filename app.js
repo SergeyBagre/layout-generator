@@ -482,14 +482,16 @@
   function processPendingMove() {
     rafScheduled = false;
     if (!drag || !pendingEvent) return;
+    if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
     const sq = currentSq;
-    if (drag.role === 's1') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
-    else if (drag.role === 's2') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
-    else if (drag.role === 'image') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
+    if (drag.role === 's1' && activeTab === 'pattern') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's2' && activeTab === 'pattern') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 'image' && activeTab === 'layout') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
   }
   const onPointerDown = (e) => {
+    if (e.currentTarget !== canvas) return;
     // Random button has priority
     const randomTarget = e.target.closest('.random-btn');
     if (randomTarget) {
@@ -504,14 +506,18 @@
     e.preventDefault();
     const pt = getSvgPointFromEvent(e); if (!pt) return;
     const role = target.dataset.role;
+    // Only allow roles that belong to the active tab
+    if (activeTab === 'pattern' && role !== 's1' && role !== 's2') return;
+    if (activeTab === 'layout' && role !== 'image') return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y };
-    else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
-    else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
+    if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, ownerTab: activeTab };
+    else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y, ownerTab: activeTab };
+    else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y, ownerTab: activeTab };
     canvas.classList.add('dragging');
   };
   const onPointerMove = (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
+    if (drag.ownerTab && drag.ownerTab !== activeTab) return;
     e.preventDefault();
     pendingEvent = e;
     if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(processPendingMove); }
