@@ -905,14 +905,10 @@
       const current = textRole === 'text1'
         ? (s1TextPos || pat.text1)
         : (s2TextPos || pat.text2);
-      const otherCurrent = textRole === 'text1'
-        ? (s2TextPos || pat.text2)
-        : (s1TextPos || pat.text1);
       let idx = cycle.indexOf(current);
       if (idx < 0) idx = 0;
       for (let i = 1; i <= cycle.length; i++) {
         const next = cycle[(idx + i) % cycle.length];
-        if (next === otherCurrent) continue;
         if (inOther(cornerPoint(ownSp, next))) continue;
         if (textRole === 'text1') s1TextPos = next;
         else s2TextPos = next;
