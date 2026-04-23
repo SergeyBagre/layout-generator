@@ -683,3 +683,50 @@ body.light-theme .switch input:checked + .switch-slider {
   border-color: rgba(52, 199, 89, 0.6);
   box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
 }
+
+/* Pattern square resize handles — visible only on hover */
+.square-resize-handle,
+.text-resize-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+#canvas g.draggable:hover .square-resize-handle,
+#canvas g.draggable:hover .text-resize-handle,
+.square-resize-handle:hover,
+.text-resize-handle:hover,
+.square-resize-handle.active,
+.text-resize-handle.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#canvas g.draggable:hover .square-resize-handle path,
+#canvas g.draggable:hover .text-resize-handle path {
+  stroke: rgba(0, 0, 0, 0.45);
+}
+
+.square-resize-handle.active path,
+.text-resize-handle.active path {
+  stroke: rgba(0, 0, 0, 0.6) !important;
+}
+
+.text-resize-handle { cursor: nwse-resize; }
+.square-resize-handle { cursor: nwse-resize; }
+
+/* Inline text editor overlay on canvas */
+.inline-text-editor {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  padding: 4px 6px;
+  outline: none;
+  resize: none;
+  line-height: 1.45;
+  z-index: 10;
+}
