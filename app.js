@@ -8,6 +8,7 @@
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
   const textEnabledIn = document.getElementById('textEnabledInput');
+  const textEnabledLabel = document.getElementById('textEnabledLabel');
   const textControlsEl = document.getElementById('textControls');
 
   // Layout-only independent inputs (no shared implementation with pattern)
@@ -783,6 +784,7 @@
     text1In.readOnly = !TEXT_ENABLED;
     text2In.readOnly = !TEXT_ENABLED;
     fsIn.disabled = !TEXT_ENABLED;
+    textEnabledLabel.textContent = TEXT_ENABLED ? 'Показать текст' : 'Скрыть текст';
   }
   textEnabledIn.addEventListener('change', () => {
     TEXT_ENABLED = textEnabledIn.checked;
@@ -1139,6 +1141,41 @@
       try { localStorage.setItem('theme', next); } catch (_) {}
     });
   }
+
+  // Slider / number interaction feedback (Pattern tab UX)
+  const feedbackTimers = new WeakMap();
+  function attachInteractionFeedback(input) {
+    if (!input) return;
+    const valEl = (() => {
+      const lbl = input.parentElement && input.parentElement.querySelector('label .val');
+      return lbl || null;
+    })();
+    const activate = () => {
+      input.classList.add('active');
+      if (valEl) valEl.classList.add('val-active');
+      const prev = feedbackTimers.get(input);
+      if (prev) clearTimeout(prev);
+    };
+    const deactivateSoon = () => {
+      const prev = feedbackTimers.get(input);
+      if (prev) clearTimeout(prev);
+      const t = setTimeout(() => {
+        input.classList.remove('active');
+        if (valEl) valEl.classList.remove('val-active');
+      }, 280);
+      feedbackTimers.set(input, t);
+    };
+    input.addEventListener('pointerdown', activate);
+    input.addEventListener('focus', activate);
+    input.addEventListener('input', activate);
+    input.addEventListener('pointerup', deactivateSoon);
+    input.addEventListener('blur', deactivateSoon);
+    input.addEventListener('change', deactivateSoon);
+    input.addEventListener('pointerleave', (e) => {
+      if (e.buttons === 0) deactivateSoon();
+    });
+  }
+  [wIn, hIn, cIn, fsIn].forEach(attachInteractionFeedback);
 
   generate();
 })();

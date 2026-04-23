@@ -625,3 +625,61 @@ body.light-theme .switch input:checked + .switch-slider {
 .text-controls.disabled .val.editable {
   cursor: not-allowed;
 }
+
+/* === Pattern tab: improved spacing and slider interaction feedback === */
+.tab-panel[data-tab-content="pattern"] .panel-body {
+  gap: 16px;
+}
+
+.tab-panel[data-tab-content="pattern"] .field {
+  gap: 10px;
+}
+
+.tab-panel[data-tab-content="pattern"] .row-pair {
+  gap: 14px;
+}
+
+/* Slider interaction feedback */
+.field input[type="range"] {
+  transition: background 0.25s ease;
+}
+
+.field input[type="range"]::-webkit-slider-thumb {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.25s ease;
+}
+
+.field input[type="range"]::-moz-range-thumb {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.25s ease;
+}
+
+.field input[type="range"].active {
+  background: rgba(52, 199, 89, 0.25);
+}
+
+.field input[type="range"].active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.18);
+  background: #34c759;
+}
+
+.field input[type="range"].active::-moz-range-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.18);
+  background: #34c759;
+}
+
+/* Value label feedback during slider interaction */
+.field label .val.val-active {
+  color: #34c759;
+  transition: color 0.25s ease;
+}
+
+/* Number input feedback */
+.field input[type="number"] {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.field input[type="number"].active {
+  border-color: rgba(52, 199, 89, 0.6);
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+}
