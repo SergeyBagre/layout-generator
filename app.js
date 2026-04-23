@@ -543,17 +543,35 @@
         g.appendChild(textHit);
 
         const indicatorR = Math.max(4, fs * 0.28);
+        const hitR = Math.max(22, indicatorR * 4);
+        const anchorG = document.createElementNS(svgNS, 'g');
+        anchorG.classList.add('anchor-indicator');
+        anchorG.dataset.role = 'text-resize';
+        anchorG.dataset.export = 'skip';
+        anchorG.style.cursor = 'nwse-resize';
+        anchorG.setAttribute('transform', `translate(${tbX}, ${tbY})`);
+
+        const anchorHit = document.createElementNS(svgNS, 'circle');
+        anchorHit.setAttribute('cx', 0);
+        anchorHit.setAttribute('cy', 0);
+        anchorHit.setAttribute('r', hitR);
+        anchorHit.setAttribute('fill', 'transparent');
+        anchorHit.setAttribute('pointer-events', 'all');
+        anchorHit.classList.add('anchor-hit');
+        anchorHit.dataset.export = 'skip';
+        anchorG.appendChild(anchorHit);
+
         const anchorDot = document.createElementNS(svgNS, 'circle');
-        anchorDot.setAttribute('cx', tbX);
-        anchorDot.setAttribute('cy', tbY);
+        anchorDot.setAttribute('cx', 0);
+        anchorDot.setAttribute('cy', 0);
         anchorDot.setAttribute('r', indicatorR);
         anchorDot.setAttribute('fill', '#84A7BA');
-        anchorDot.setAttribute('pointer-events', 'all');
-        anchorDot.classList.add('anchor-indicator');
-        anchorDot.dataset.role = 'text-resize';
+        anchorDot.setAttribute('pointer-events', 'none');
+        anchorDot.classList.add('anchor-dot');
         anchorDot.dataset.export = 'skip';
-        anchorDot.style.cursor = 'nwse-resize';
-        g.appendChild(anchorDot);
+        anchorG.appendChild(anchorDot);
+
+        g.appendChild(anchorG);
       }
 
       root.appendChild(g);
@@ -750,19 +768,17 @@
   }
   const onPointerDown = (e) => {
     if (e.currentTarget !== canvas) return;
-    // Random button has priority
     const randomTarget = e.target.closest('.random-btn');
     if (randomTarget) {
       e.preventDefault();
       e.stopPropagation();
       if (activeTab === 'layout') {
         seed_L = Date.now() + Math.floor(Math.random() * 999999);
-        s1_L = null; s2_L = null; lastFilled_L = [];
+        lastFilled_L = [];
         generate_L();
       } else {
         seed = Date.now() + Math.floor(Math.random() * 999999);
-        s1 = null; s2 = null;
-        s1Fs = null;
+        lastFilled = [];
         generate();
       }
       return;
@@ -831,6 +847,19 @@
   // Pattern hover-only anchor indicator.
   // The anchor dot is visible ONLY while the cursor is inside the .text-hit region.
   // Its position is computed dynamically from the cursor's nearest corner of the text bbox.
+  let anchorHideTimer = null;
+  function cancelAnchorHide() {
+    if (anchorHideTimer) { clearTimeout(anchorHideTimer); anchorHideTimer = null; }
+  }
+  function scheduleAnchorHide() {
+    cancelAnchorHide();
+    anchorHideTimer = setTimeout(() => {
+      anchorHideTimer = null;
+      if (drag && drag.role === 'text-resize') return;
+      const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
+      if (s1g) s1g.classList.remove('text-hover');
+    }, 250);
+  }
   function updatePatternAnchor(e) {
     if (activeTab !== 'pattern') return;
     const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
@@ -838,15 +867,17 @@
     const anchorEl = s1g.querySelector('.anchor-indicator');
     if (!anchorEl) return;
     if (drag && drag.role === 'text-resize') {
+      cancelAnchorHide();
       s1g.classList.add('text-hover');
       return;
     }
     const hit = e.target.closest('.text-hit');
     const onAnchor = e.target.closest('.anchor-indicator');
     if ((!hit && !onAnchor) || (hit && hit.closest('g.draggable[data-role="s1"]') !== s1g)) {
-      s1g.classList.remove('text-hover');
+      scheduleAnchorHide();
       return;
     }
+    cancelAnchorHide();
     const pt = getSvgPointFromEvent(e);
     if (!pt) return;
     const hitEl = hit || s1g.querySelector('.text-hit');
@@ -863,16 +894,16 @@
     const offset = 6;
     const cornerX = isLeft ? tbx - offset : tbx + tbw + offset;
     const cornerY = isTop ? tby - offset : tby + tbh + offset;
-    anchorEl.setAttribute('cx', cornerX);
-    anchorEl.setAttribute('cy', cornerY);
-    anchorEl.dataset.cornerX = isLeft ? 'left' : 'right';
-    anchorEl.dataset.cornerY = isTop ? 'top' : 'bottom';
+    if (!onAnchor) {
+      anchorEl.setAttribute('transform', `translate(${cornerX}, ${cornerY})`);
+      anchorEl.dataset.cornerX = isLeft ? 'left' : 'right';
+      anchorEl.dataset.cornerY = isTop ? 'top' : 'bottom';
+    }
     s1g.classList.add('text-hover');
   }
   function hidePatternAnchor() {
     if (drag && drag.role === 'text-resize') return;
-    const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
-    if (s1g) s1g.classList.remove('text-hover');
+    scheduleAnchorHide();
   }
   canvasPattern.addEventListener('pointermove', updatePatternAnchor);
   canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
