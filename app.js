@@ -713,9 +713,21 @@
 
   // Theme toggle
   const themeBtn = document.getElementById('themeToggle');
+  const applyTheme = (theme) => {
+    document.body.classList.toggle('light-theme', theme === 'light');
+    document.body.classList.toggle('dark-theme', theme === 'dark');
+  };
+  let savedTheme = 'light';
+  try {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light' || stored === 'dark') savedTheme = stored;
+  } catch (_) {}
+  applyTheme(savedTheme);
   if (themeBtn) {
     themeBtn.addEventListener('click', () => {
-      document.body.classList.toggle('light-theme');
+      const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+      applyTheme(next);
+      try { localStorage.setItem('theme', next); } catch (_) {}
     });
   }
 
