@@ -685,35 +685,39 @@ body.light-theme .switch input:checked + .switch-slider {
 }
 
 /* Pattern square resize handles — visible only on hover */
-.square-resize-handle,
-.text-resize-handle {
+.square-resize-handle {
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
 }
 
 #canvas g.draggable:hover .square-resize-handle,
-#canvas g.draggable:hover .text-resize-handle,
 .square-resize-handle:hover,
-.text-resize-handle:hover,
-.square-resize-handle.active,
-.text-resize-handle.active {
+.square-resize-handle.active {
   opacity: 1;
   pointer-events: auto;
 }
 
-#canvas g.draggable:hover .square-resize-handle path,
-#canvas g.draggable:hover .text-resize-handle path {
+#canvas g.draggable:hover .square-resize-handle path {
   stroke: rgba(0, 0, 0, 0.45);
 }
 
-.square-resize-handle.active path,
-.text-resize-handle.active path {
+.square-resize-handle.active path {
   stroke: rgba(0, 0, 0, 0.6) !important;
 }
 
-.text-resize-handle { cursor: nwse-resize; }
 .square-resize-handle { cursor: nwse-resize; }
+
+/* Hover-only anchor indicator for Pattern square 1.
+   Hidden by default; fades in when cursor is over the text region. */
+.anchor-indicator {
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+#canvas g.draggable[data-role="s1"].text-hover .anchor-indicator {
+  opacity: 1;
+}
 
 /* Inline text editor overlay on canvas */
 .inline-text-editor {

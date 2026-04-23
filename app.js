@@ -488,7 +488,7 @@
         });
       }
 
-      // Pattern master-only: text edit hit + text-resize handle + cursor-aware anchor indicator
+      // Pattern master-only: text edit hit region + hover-only anchor indicator
       if (patternHandles && showText && TEXT_ENABLED) {
         const textBlockW = Math.max(60, sq * 0.55);
         const textBlockH = totalH;
@@ -501,7 +501,7 @@
           default: tbX = sp.x + (sq - textBlockW) / 2; tbY = sp.y + (sq - totalH) / 2;
         }
 
-        // Text edit hit region — enables double-click to edit
+        // Text edit hit region — enables double-click to edit AND drives anchor visibility
         const textHit = document.createElementNS(svgNS, 'rect');
         textHit.setAttribute('x', tbX - 6);
         textHit.setAttribute('y', tbY - 4);
@@ -514,77 +514,25 @@
         textHit.dataset.role = 'text-edit';
         textHit.style.cursor = 'text';
         textHit.dataset.export = 'skip';
+        // Store text bbox on the hit element so the hover handler can compute nearest corner
+        textHit.dataset.tbx = tbX;
+        textHit.dataset.tby = tbY;
+        textHit.dataset.tbw = textBlockW;
+        textHit.dataset.tbh = textBlockH;
         g.appendChild(textHit);
 
-        // Text-resize handle — rounded L-bracket near text corner
-        const bs = Math.max(12, fs * 0.7);
-        let bx, by, bracketPath;
-        switch (textPos) {
-          case 'top-left':
-            bx = tbX - bs - 2; by = tbY - bs - 2;
-            bracketPath = `M ${bx + bs} ${by + bs*0.2} Q ${bx + bs*0.2} ${by + bs*0.2} ${bx + bs*0.2} ${by + bs}`;
-            break;
-          case 'top-right':
-            bx = tbX + textBlockW + 2; by = tbY - bs - 2;
-            bracketPath = `M ${bx} ${by + bs*0.2} Q ${bx + bs*0.8} ${by + bs*0.2} ${bx + bs*0.8} ${by + bs}`;
-            break;
-          case 'bottom-left':
-            bx = tbX - bs - 2; by = tbY + textBlockH + 2;
-            bracketPath = `M ${bx + bs*0.2} ${by} Q ${bx + bs*0.2} ${by + bs*0.8} ${bx + bs} ${by + bs*0.8}`;
-            break;
-          case 'bottom-right':
-            bx = tbX + textBlockW + 2; by = tbY + textBlockH + 2;
-            bracketPath = `M ${bx + bs*0.8} ${by} Q ${bx + bs*0.8} ${by + bs*0.8} ${bx} ${by + bs*0.8}`;
-            break;
-          default:
-            bx = tbX - bs - 2; by = tbY - bs - 2;
-            bracketPath = `M ${bx + bs} ${by + bs*0.2} Q ${bx + bs*0.2} ${by + bs*0.2} ${bx + bs*0.2} ${by + bs}`;
-        }
-        const textResizeG = document.createElementNS(svgNS, 'g');
-        textResizeG.classList.add('text-resize-handle');
-        textResizeG.dataset.role = 'text-resize';
-        textResizeG.dataset.textRole = 'text1';
-        textResizeG.dataset.export = 'skip';
-        const textBracket = document.createElementNS(svgNS, 'path');
-        textBracket.setAttribute('d', bracketPath);
-        textBracket.setAttribute('stroke', 'rgba(52, 199, 89, 0.95)');
-        textBracket.setAttribute('stroke-width', 3);
-        textBracket.setAttribute('stroke-linecap', 'round');
-        textBracket.setAttribute('fill', 'none');
-        textResizeG.appendChild(textBracket);
-        const textHandleHit = document.createElementNS(svgNS, 'rect');
-        textHandleHit.setAttribute('x', bx - 4);
-        textHandleHit.setAttribute('y', by - 4);
-        textHandleHit.setAttribute('width', bs + 8);
-        textHandleHit.setAttribute('height', bs + 8);
-        textHandleHit.setAttribute('fill', 'transparent');
-        textHandleHit.setAttribute('pointer-events', 'all');
-        textResizeG.appendChild(textHandleHit);
-        textResizeG.style.cursor = 'nwse-resize';
-        g.appendChild(textResizeG);
-
-        // Cursor-aware text anchor indicator — 4 circles (one per text corner), toggled by proximity
-        const indicatorR = fs * 0.5;
-        const corners = [
-          { id: 'tl', cx: tbX, cy: tbY },
-          { id: 'tr', cx: tbX + textBlockW, cy: tbY },
-          { id: 'bl', cx: tbX, cy: tbY + textBlockH },
-          { id: 'br', cx: tbX + textBlockW, cy: tbY + textBlockH },
-        ];
-        corners.forEach(cm => {
-          const circle = document.createElementNS(svgNS, 'circle');
-          circle.setAttribute('cx', cm.cx);
-          circle.setAttribute('cy', cm.cy);
-          circle.setAttribute('r', indicatorR);
-          circle.setAttribute('fill', 'rgba(52, 199, 89, 0.35)');
-          circle.setAttribute('stroke', 'rgba(52, 199, 89, 0.9)');
-          circle.setAttribute('stroke-width', 1.5);
-          circle.setAttribute('pointer-events', 'none');
-          circle.classList.add('anchor-indicator');
-          circle.dataset.corner = cm.id;
-          circle.dataset.export = 'skip';
-          g.appendChild(circle);
-        });
+        // Single cursor-driven anchor indicator — hidden by default, positioned dynamically on hover.
+        // No persistent state: pointer-events:none so it never interferes with text-hit.
+        const indicatorR = Math.max(4, fs * 0.3);
+        const anchorDot = document.createElementNS(svgNS, 'circle');
+        anchorDot.setAttribute('cx', tbX);
+        anchorDot.setAttribute('cy', tbY);
+        anchorDot.setAttribute('r', indicatorR);
+        anchorDot.setAttribute('fill', '#84A7BA');
+        anchorDot.setAttribute('pointer-events', 'none');
+        anchorDot.classList.add('anchor-indicator');
+        anchorDot.dataset.export = 'skip';
+        g.appendChild(anchorDot);
       }
 
       root.appendChild(g);
@@ -754,13 +702,6 @@
     if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
-    if (drag.role === 'text-resize' && activeTab === 'pattern') {
-      const delta = ((pt.x - drag.startPt.x) + (pt.y - drag.startPt.y)) * 0.5;
-      const newFs = clamp(Math.round(drag.startFs + delta * 0.5), 8, 120);
-      s1Fs = newFs;
-      drag.moved = true; redraw();
-      return;
-    }
     if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2' && activeTab === 'pattern') { const sq = currentSq; s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
@@ -787,28 +728,8 @@
       return;
     }
 
-    // Pattern-only: text-resize handle
-    if (activeTab === 'pattern') {
-      const txtResize = e.target.closest('.text-resize-handle');
-      if (txtResize) {
-        e.preventDefault();
-        e.stopPropagation();
-        const pt = getSvgPointFromEvent(e); if (!pt) return;
-        const curFs = s1Fs != null ? s1Fs : FS;
-        txtResize.classList.add('active');
-        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-        drag = {
-          role: 'text-resize',
-          textRole: 'text1',
-          pointerId: e.pointerId,
-          startPt: pt,
-          startFs: curFs,
-          el: txtResize,
-          ownerTab: activeTab,
-        };
-        return;
-      }
-    }
+    // Pattern-only: double-click on text for edit (handled via dblclick listener below).
+    // No text-resize handle exists anymore — anchor dot is a pure visual indicator.
 
     const target = e.target.closest('.draggable');
     if (!target) return;
@@ -840,27 +761,41 @@
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
   };
-  // Pattern cursor-aware anchor indicator
-  canvasPattern.addEventListener('pointermove', (e) => {
+  // Pattern hover-only anchor indicator.
+  // The anchor dot is visible ONLY while the cursor is inside the .text-hit region.
+  // Its position is computed dynamically from the cursor's nearest corner of the text bbox.
+  function updatePatternAnchor(e) {
     if (activeTab !== 'pattern') return;
     const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
     if (!s1g) return;
+    const anchorEl = s1g.querySelector('.anchor-indicator');
+    if (!anchorEl) return;
+    const hit = e.target.closest('.text-hit');
+    if (!hit || hit.closest('g.draggable[data-role="s1"]') !== s1g) {
+      s1g.classList.remove('text-hover');
+      return;
+    }
     const pt = getSvgPointFromEvent(e);
-    if (!pt || !s1) return;
-    const indicators = s1g.querySelectorAll('.anchor-indicator');
-    if (!indicators.length) return;
-    // Reference point — use s1's rendered text block center based on textPos
-    // Determine cursor position relative to s1 square center → pick nearest corner quadrant
-    const cx = s1.x + currentSq / 2;
-    const cy = s1.y + currentSq / 2;
-    const hLeft = pt.x < cx, vTop = pt.y < cy;
-    const nearest = (vTop ? 't' : 'b') + (hLeft ? 'l' : 'r');
-    s1g.dataset.nearCorner = nearest;
-  });
-  canvasPattern.addEventListener('pointerleave', () => {
+    if (!pt) return;
+    const tbx = parseFloat(hit.dataset.tbx);
+    const tby = parseFloat(hit.dataset.tby);
+    const tbw = parseFloat(hit.dataset.tbw);
+    const tbh = parseFloat(hit.dataset.tbh);
+    if (!isFinite(tbx) || !isFinite(tby)) return;
+    const midX = tbx + tbw / 2;
+    const midY = tby + tbh / 2;
+    const cornerX = pt.x < midX ? tbx : tbx + tbw;
+    const cornerY = pt.y < midY ? tby : tby + tbh;
+    anchorEl.setAttribute('cx', cornerX);
+    anchorEl.setAttribute('cy', cornerY);
+    s1g.classList.add('text-hover');
+  }
+  function hidePatternAnchor() {
     const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
-    if (s1g) delete s1g.dataset.nearCorner;
-  });
+    if (s1g) s1g.classList.remove('text-hover');
+  }
+  canvasPattern.addEventListener('pointermove', updatePatternAnchor);
+  canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
 
   [canvasPattern, canvasLayout].forEach(c => {
     c.addEventListener('pointerdown', onPointerDown);
