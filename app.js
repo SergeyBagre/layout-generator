@@ -2,9 +2,7 @@
   const wIn = document.getElementById('wInput');
   const hIn = document.getElementById('hInput');
   const cIn = document.getElementById('cInput');
-  const fsIn = document.getElementById('fsInput');
   const cVal = document.getElementById('cVal');
-  const fsVal = document.getElementById('fsVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
   const textEnabledIn = document.getElementById('textEnabledInput');
@@ -46,9 +44,10 @@
   const scaleInput = document.getElementById('scaleInput');
   const scaleVal = document.getElementById('scaleVal');
 
-  let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value, FS = +fsIn.value;
+  let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value;
+  let FS = 16;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
-  let TEXT_ENABLED = textEnabledIn.checked;
+  let TEXT_ENABLED = !textEnabledIn.checked;
 
   // Layout-only independent state (not shared with pattern)
   let W_L = +wInLayout.value, H_L = +hInLayout.value;
@@ -779,8 +778,6 @@
       const newFs = clamp(Math.round(drag.startFs + signed), 8, 120);
       if (newFs !== s1Fs) {
         s1Fs = newFs;
-        fsIn.value = newFs;
-        fsVal.textContent = newFs + ' px';
         FS = newFs;
         drag.moved = true;
         redraw();
@@ -1109,7 +1106,6 @@
   handleLayoutNumberInput(hInLayout, 300, 1080, (v) => { H_L = v; });
 
   cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
-  fsIn.addEventListener('input', () => { FS = +fsIn.value; fsVal.textContent = FS + ' px'; s1Fs = null; redraw(); });
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
 
@@ -1119,11 +1115,10 @@
     text2In.disabled = !TEXT_ENABLED;
     text1In.readOnly = !TEXT_ENABLED;
     text2In.readOnly = !TEXT_ENABLED;
-    fsIn.disabled = !TEXT_ENABLED;
-    textEnabledLabel.textContent = TEXT_ENABLED ? 'Показать текст' : 'Скрыть текст';
+    textEnabledLabel.textContent = TEXT_ENABLED ? 'Скрыть текст' : 'Показать текст';
   }
   textEnabledIn.addEventListener('change', () => {
-    TEXT_ENABLED = textEnabledIn.checked;
+    TEXT_ENABLED = !textEnabledIn.checked;
     applyTextEnabledUI();
     redraw();
   });
@@ -1265,7 +1260,6 @@
     }
   });
 
-  fsVal.textContent = FS + ' px';
   cVal.textContent = COUNT;
   // Independent layout-tab labels
   fsValLayout.textContent = FS_L + ' px';
@@ -1278,7 +1272,7 @@
   footPadVal.textContent = FOOT_PAD + ' px';
   // Tabs with independent state
   const patternInputs = {
-    wInput: wIn, hInput: hIn, cInput: cIn, fsInput: fsIn,
+    wInput: wIn, hInput: hIn, cInput: cIn,
     text1Input: text1In, text2Input: text2In,
   };
   const layoutInputs = {
@@ -1329,11 +1323,10 @@
   };
 
   function syncPatternVars() {
-    W = +wIn.value; H = +hIn.value; COUNT = +cIn.value; FS = +fsIn.value;
+    W = +wIn.value; H = +hIn.value; COUNT = +cIn.value;
     TEXT1 = text1In.value; TEXT2 = text2In.value;
     wIn.value = W; hIn.value = H;
     cVal.textContent = COUNT;
-    fsVal.textContent = FS + ' px';
   }
   function syncLayoutVars() {
     TITLE_TEXT = titleIn.value;
@@ -1402,7 +1395,6 @@
         TEXT1 = patternState.TEXT1; TEXT2 = patternState.TEXT2;
         wIn.value = W; hIn.value = H;
         cVal.textContent = COUNT;
-        fsVal.textContent = FS + ' px';
         s1 = deepClone(patternState.s1);
         s2 = deepClone(patternState.s2);
         pat = deepClone(patternState.pat);
@@ -1511,7 +1503,7 @@
       if (e.buttons === 0) deactivateSoon();
     });
   }
-  [wIn, hIn, cIn, fsIn].forEach(attachInteractionFeedback);
+  [wIn, hIn, cIn].forEach(attachInteractionFeedback);
 
   generate();
 })();

@@ -138,6 +138,10 @@ html, body {
   gap: 8px;
 }
 
+.text-controls .field + .field {
+  margin-top: 16px;
+}
+
 .field label {
   font-size: 13px;
   font-weight: 500;
