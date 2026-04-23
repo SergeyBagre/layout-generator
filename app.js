@@ -861,7 +861,7 @@
       }
     }
 
-    const textHitTarget = activeTab === 'pattern' ? e.target.closest('.text-hit') : null;
+    const textHitTarget = (activeTab === 'pattern' || activeTab === 'layout') ? e.target.closest('.text-hit') : null;
     const target = e.target.closest('.draggable');
     if (!target && !textHitTarget) return;
     e.preventDefault();
