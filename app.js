@@ -147,6 +147,103 @@
     pat = chosenPat;
   }
 
+  // === INDEPENDENT LAYOUT-CANVAS SYSTEM (duplicated behavior, no shared state) ===
+  let s1_L = null, s2_L = null, pat_L = null;
+  let lastFilled_L = [];
+  let currentSq_L = 0;
+  let seed_L = Date.now() + 1;
+
+  function rng_L() { seed_L = (seed_L * 1664525 + 1013904223) & 0xffffffff; return (seed_L >>> 0) / 0xffffffff; }
+  function shuffle_L(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng_L() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function pick_L(arr) { return arr[Math.floor(rng_L() * arr.length)]; }
+
+  function currentSquareSize_L() {
+    return Math.floor(Math.min(W_L, H_L) / 3);
+  }
+
+  function textPosForDelta_L(dx, dy) {
+    const sx = Math.sign(dx) || 1, sy = Math.sign(dy) || 1;
+    return offsetPatterns.find(p => p.dx === sx && p.dy === sy) || offsetPatterns[0];
+  }
+
+  function randomizeSpecials_L() {
+    const sq = currentSquareSize_L();
+    const overlapRatio = 0.4 + rng_L() * 0.2;
+    const offsetDist = sq * (1 - overlapRatio);
+    const chosenPat = pick_L(offsetPatterns);
+    const dx = chosenPat.dx * offsetDist, dy = chosenPat.dy * offsetDist;
+    const s1xMin = Math.max(0, -dx), s1xMax = Math.min(W_L - sq, W_L - sq - dx);
+    const s1yMin = Math.max(0, -dy), s1yMax = Math.min(H_L - sq, H_L - sq - dy);
+    const s1x = Math.round(s1xMin + rng_L() * Math.max(0, s1xMax - s1xMin));
+    const s1y = Math.round(s1yMin + rng_L() * Math.max(0, s1yMax - s1yMin));
+    s1_L = { x: s1x, y: s1y };
+    s2_L = { x: Math.round(s1x + dx), y: Math.round(s1y + dy) };
+    pat_L = chosenPat;
+  }
+
+  function generate_L() {
+    const sq = currentSquareSize_L();
+    currentSq_L = sq;
+    if (!s1_L || !s2_L) randomizeSpecials_L();
+    s1_L.x = clamp(s1_L.x, 0, W_L - sq); s1_L.y = clamp(s1_L.y, 0, H_L - sq);
+    s2_L.x = clamp(s2_L.x, 0, W_L - sq); s2_L.y = clamp(s2_L.y, 0, H_L - sq);
+    pat_L = textPosForDelta_L(s2_L.x - s1_L.x, s2_L.y - s1_L.y);
+
+    const s2Rect = { x: s2_L.x, y: s2_L.y, w: sq, h: sq };
+    const overlapsS2Cell = (c, r) => {
+      const x = s1_L.x + c * sq, y = s1_L.y + r * sq;
+      return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w || y + sq <= s2Rect.y || y >= s2Rect.y + s2Rect.h);
+    };
+
+    const occupied = new Set();
+    const key = (c, r) => `${c},${r}`;
+    occupied.add(key(0, 0));
+    const filled = [];
+
+    const s2GC = Math.round((s2_L.x - s1_L.x) / sq);
+    const s2GR = Math.round((s2_L.y - s1_L.y) / sq);
+    occupied.add(key(s2GC, s2GR));
+
+    const firstCandidates = shuffle_L(diag.map(([dc, dr]) => ({ c: dc, r: dr })))
+      .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+    if (firstCandidates.length > 0) {
+      const first = firstCandidates[0];
+      occupied.add(key(first.c, first.r));
+      filled.push(first);
+    }
+
+    let attempts = 0;
+    const maxAttempts = COUNT_L * 50;
+    while (filled.length < COUNT_L && attempts < maxAttempts) {
+      attempts++;
+      const anchor = filled[Math.floor(rng_L() * filled.length)];
+      const dir = pick_L(diag);
+      const nc = anchor.c + dir[0], nr = anchor.r + dir[1];
+      if (occupied.has(key(nc, nr))) continue;
+      if (overlapsS2Cell(nc, nr)) continue;
+      occupied.add(key(nc, nr));
+      filled.push({ c: nc, r: nr });
+    }
+
+    if (filled.length < COUNT_L) {
+      const queue = filled.slice();
+      while (filled.length < COUNT_L && queue.length > 0) {
+        const anchor = queue.shift();
+        const candidates = shuffle_L(diag.map(([dc, dr]) => ({ c: anchor.c + dc, r: anchor.r + dr })))
+          .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+        for (const cand of candidates) {
+          if (filled.length >= COUNT_L) break;
+          occupied.add(key(cand.c, cand.r));
+          filled.push(cand);
+          queue.push(cand);
+        }
+      }
+    }
+    lastFilled_L = filled;
+    render(sq, filled);
+  }
+  // === END INDEPENDENT LAYOUT-CANVAS SYSTEM ===
+
   let lastFilled = [];
 
   function generate() {
@@ -214,12 +311,18 @@
   }
 
   function redraw() {
-    const sq = currentSquareSize();
-    currentSq = sq;
     if (activeTab === 'layout') {
-      render(sq, []);
+      const sq = currentSquareSize_L();
+      currentSq_L = sq;
+      if (!s1_L || !s2_L || lastFilled_L.length === 0) { generate_L(); return; }
+      s1_L.x = clamp(s1_L.x, 0, W_L - sq); s1_L.y = clamp(s1_L.y, 0, H_L - sq);
+      s2_L.x = clamp(s2_L.x, 0, W_L - sq); s2_L.y = clamp(s2_L.y, 0, H_L - sq);
+      pat_L = textPosForDelta_L(s2_L.x - s1_L.x, s2_L.y - s1_L.y);
+      render(sq, lastFilled_L);
       return;
     }
+    const sq = currentSquareSize();
+    currentSq = sq;
     if (!s1 || !s2 || lastFilled.length === 0) { generate(); return; }
     s1.x = clamp(s1.x, 0, W - sq); s1.y = clamp(s1.y, 0, H - sq);
     s2.x = clamp(s2.x, 0, W - sq); s2.y = clamp(s2.y, 0, H - sq);
@@ -281,6 +384,20 @@
       });
     }
 
+    // Independent layout-canvas colored squares (not shared with pattern)
+    if (activeTab === 'layout' && s1_L && s2_L) {
+      const sqL = currentSq_L;
+      lastFilled_L.forEach(({ c, r }) => {
+        const el = document.createElementNS(svgNS, 'rect');
+        el.setAttribute('x', s1_L.x + c * sqL);
+        el.setAttribute('y', s1_L.y + r * sqL);
+        el.setAttribute('width', sqL);
+        el.setAttribute('height', sqL);
+        el.setAttribute('fill', '#0098B6');
+        root.appendChild(el);
+      });
+    }
+
     if (activeTab === 'layout' && IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
       const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
       if (!imgPos) imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
@@ -295,11 +412,22 @@
       root.appendChild(imgEl);
     }
 
-    const specialDefs = (activeTab === 'pattern') ? [
-      { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true },
-      { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false }
-    ] : [];
-    specialDefs.forEach(({ sp, lines, textPos, role, isFirst }) => {
+    let specialDefs;
+    if (activeTab === 'pattern') {
+      specialDefs = [
+        { sp: s1, lines: TEXT1.split('\n'), textPos: pat.text1, role: 's1', isFirst: true, sqSize: sq, fsSize: FS },
+        { sp: s2, lines: TEXT2.split('\n'), textPos: pat.text2, role: 's2', isFirst: false, sqSize: sq, fsSize: FS }
+      ];
+    } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
+      specialDefs = [
+        { sp: s1_L, lines: TEXT1_L.split('\n'), textPos: pat_L.text1, role: 's1_L', isFirst: true, sqSize: currentSq_L, fsSize: FS_L },
+        { sp: s2_L, lines: TEXT2_L.split('\n'), textPos: pat_L.text2, role: 's2_L', isFirst: false, sqSize: currentSq_L, fsSize: FS_L }
+      ];
+    } else {
+      specialDefs = [];
+    }
+    specialDefs.forEach(({ sp, lines, textPos, role, isFirst, sqSize, fsSize }) => {
+      const sq = sqSize;
       const g = document.createElementNS(svgNS, 'g');
       g.classList.add('draggable');
       g.dataset.role = role;
@@ -317,7 +445,7 @@
       hit.setAttribute('pointer-events', 'all');
       g.appendChild(hit);
 
-      const fs = FS;
+      const fs = fsSize;
       const lineH = fs * 1.45;
       const margin = Math.max(8, sq * 0.06);
       let tx, ty, anchor;
@@ -351,6 +479,7 @@
         const by = sp.y + sq / 2;
         const btnG = document.createElementNS(svgNS, 'g');
         btnG.classList.add('random-btn');
+        btnG.dataset.role = role === 's1_L' ? 'random_L' : 'random';
         btnG.dataset.export = 'skip';
         btnG.setAttribute('transform', `translate(${bx}, ${by})`);
         const bg = document.createElementNS(svgNS, 'circle');
@@ -501,9 +630,10 @@
     if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
-    const sq = currentSq;
-    if (drag.role === 's1' && activeTab === 'pattern') { s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
-    else if (drag.role === 's2' && activeTab === 'pattern') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's2' && activeTab === 'pattern') { const sq = currentSq; s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's2_L' && activeTab === 'layout') { const sq = currentSq_L; s2_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s2_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
     else if (drag.role === 'image' && activeTab === 'layout') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
   }
   const onPointerDown = (e) => {
@@ -513,8 +643,14 @@
     if (randomTarget) {
       e.preventDefault();
       e.stopPropagation();
-      seed = Date.now() + Math.floor(Math.random() * 999999);
-      generate();
+      if (activeTab === 'layout') {
+        seed_L = Date.now() + Math.floor(Math.random() * 999999);
+        s1_L = null; s2_L = null; lastFilled_L = [];
+        generate_L();
+      } else {
+        seed = Date.now() + Math.floor(Math.random() * 999999);
+        generate();
+      }
       return;
     }
     const target = e.target.closest('.draggable');
@@ -524,10 +660,12 @@
     const role = target.dataset.role;
     // Only allow roles that belong to the active tab
     if (activeTab === 'pattern' && role !== 's1' && role !== 's2') return;
-    if (activeTab === 'layout' && role !== 'image') return;
+    if (activeTab === 'layout' && role !== 's1_L' && role !== 's2_L' && role !== 'image') return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, ownerTab: activeTab };
     else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y, ownerTab: activeTab };
+    else if (role === 's1_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1_L.x, offsetY: pt.y - s1_L.y, ownerTab: activeTab };
+    else if (role === 's2_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2_L.x, offsetY: pt.y - s2_L.y, ownerTab: activeTab };
     else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y, ownerTab: activeTab };
     canvas.classList.add('dragging');
   };
@@ -618,6 +756,7 @@
       v = clamp(v, min, max);
       input.value = v; setter(v);
       imgPos = null;
+      s1_L = null; s2_L = null; lastFilled_L = [];
       if (activeTab === 'layout') { W = W_L; H = H_L; }
       redraw();
     };
@@ -636,7 +775,7 @@
   cInLayout.addEventListener('input', () => {
     COUNT_L = +cInLayout.value; cValLayout.textContent = COUNT_L;
     if (activeTab === 'layout') COUNT = COUNT_L;
-    redraw();
+    if (activeTab === 'layout') generate_L(); else redraw();
   });
   fsInLayout.addEventListener('input', () => {
     FS_L = +fsInLayout.value; fsValLayout.textContent = FS_L + ' px';
