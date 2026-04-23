@@ -763,6 +763,13 @@
       }
       return;
     }
+    if (drag.pendingClick) {
+      const dx = pt.x - drag.startPt.x;
+      const dy = pt.y - drag.startPt.y;
+      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      drag.pendingClick = false;
+      if (!drag.role) { drag = null; canvas.classList.remove('dragging'); return; }
+    }
     if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2' && activeTab === 'pattern') { const sq = currentSq; s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
@@ -812,12 +819,29 @@
       }
     }
 
+    const textHitTarget = activeTab === 'pattern' ? e.target.closest('.text-hit') : null;
     const target = e.target.closest('.draggable');
-    if (!target) return;
+    if (!target && !textHitTarget) return;
     e.preventDefault();
     const pt = getSvgPointFromEvent(e); if (!pt) return;
+    if (textHitTarget) {
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      const role = target ? target.dataset.role : null;
+      drag = {
+        role: role === 's1' ? 's1' : role === 's2' ? 's2' : null,
+        pointerId: e.pointerId,
+        offsetX: role === 's1' && s1 ? pt.x - s1.x : role === 's2' && s2 ? pt.x - s2.x : 0,
+        offsetY: role === 's1' && s1 ? pt.y - s1.y : role === 's2' && s2 ? pt.y - s2.y : 0,
+        ownerTab: activeTab,
+        startPt: pt,
+        textHit: textHitTarget,
+        pendingClick: true,
+        moved: false,
+      };
+      canvas.classList.add('dragging');
+      return;
+    }
     const role = target.dataset.role;
-    // Only allow roles that belong to the active tab
     if (activeTab === 'pattern' && role !== 's1' && role !== 's2') return;
     if (activeTab === 'layout' && role !== 's1_L' && role !== 's2_L' && role !== 'image') return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -840,11 +864,33 @@
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     if (drag.el) drag.el.classList.remove('active');
     const wasTextResize = drag.role === 'text-resize';
+    const wasPendingClick = drag.pendingClick;
+    const clickHit = drag.textHit;
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
     if (wasTextResize) {
       const s1g = canvasPattern.querySelector('g.draggable[data-role="s1"]');
       if (s1g) s1g.classList.remove('text-hover');
+    }
+    if (wasPendingClick && clickHit && activeTab === 'pattern' && (!e.detail || e.detail < 2)) {
+      const textRole = clickHit.dataset.textRole;
+      const cycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+      const current = textRole === 'text1'
+        ? (s1TextPos || pat.text1)
+        : (s2TextPos || pat.text2);
+      const blocked = textRole === 'text1'
+        ? (s2TextPos || pat.text2)
+        : (s1TextPos || pat.text1);
+      let idx = cycle.indexOf(current);
+      if (idx < 0) idx = 0;
+      for (let i = 1; i <= cycle.length; i++) {
+        const next = cycle[(idx + i) % cycle.length];
+        if (next === blocked) continue;
+        if (textRole === 'text1') s1TextPos = next;
+        else s2TextPos = next;
+        break;
+      }
+      redraw();
     }
   };
   // Pattern hover-only anchor indicator.
@@ -919,46 +965,6 @@
   });
 
   const cornerCycle = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
-  const textAlignMap = {
-    'top-left': 'left', 'bottom-left': 'left',
-    'top-right': 'right', 'bottom-right': 'right',
-  };
-  let clickTimer = null;
-  canvasPattern.addEventListener('click', (e) => {
-    if (activeTab !== 'pattern') return;
-    if (e.detail && e.detail > 1) return;
-    const hit = e.target.closest('.text-hit');
-    if (!hit) return;
-    if (e.target.closest('.anchor-indicator') || e.target.closest('.random-btn')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
-    clickTimer = setTimeout(() => {
-      clickTimer = null;
-      const textRole = hit.dataset.textRole;
-      const getCurrent = () => textRole === 'text1'
-        ? (s1TextPos || pat.text1)
-        : (s2TextPos || pat.text2);
-      const getBlocked = () => textRole === 'text1'
-        ? (s2TextPos || pat.text2)
-        : (s1TextPos || pat.text1);
-      const current = getCurrent();
-      const blocked = getBlocked();
-      let idx = cornerCycle.indexOf(current);
-      if (idx < 0) idx = 0;
-      for (let i = 1; i <= cornerCycle.length; i++) {
-        const next = cornerCycle[(idx + i) % cornerCycle.length];
-        if (next === blocked) continue;
-        if (textRole === 'text1') s1TextPos = next;
-        else s2TextPos = next;
-        break;
-      }
-      redraw();
-    }, 220);
-  });
-  canvasPattern.addEventListener('dblclick', () => {
-    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
-  }, true);
 
   // Pattern: inline text edit on double-click
   canvasPattern.addEventListener('dblclick', (e) => {
