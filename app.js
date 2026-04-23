@@ -21,7 +21,9 @@
   const footFsVal = document.getElementById('footFsVal');
   const footPadIn = document.getElementById('footPadInput');
   const footPadVal = document.getElementById('footPadVal');
-  const canvas = document.getElementById('canvas');
+  const canvasPattern = document.getElementById('canvas');
+  const canvasLayout = document.getElementById('canvasLayout');
+  let canvas = canvasPattern;
   const downloadBtn = document.getElementById('downloadBtn');
   const exportJpgBtn = document.getElementById('exportJpgBtn');
   const imgFile = document.getElementById('imgFile');
@@ -478,7 +480,7 @@
     else if (drag.role === 's2') { s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 'image') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
   }
-  canvas.addEventListener('pointerdown', (e) => {
+  const onPointerDown = (e) => {
     // Random button has priority
     const randomTarget = e.target.closest('.random-btn');
     if (randomTarget) {
@@ -498,21 +500,25 @@
     else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y };
     else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y };
     canvas.classList.add('dragging');
-  });
-  canvas.addEventListener('pointermove', (e) => {
+  };
+  const onPointerMove = (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     e.preventDefault();
     pendingEvent = e;
     if (!rafScheduled) { rafScheduled = true; requestAnimationFrame(processPendingMove); }
-  });
+  };
   const endDrag = (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
   };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
+  [canvasPattern, canvasLayout].forEach(c => {
+    c.addEventListener('pointerdown', onPointerDown);
+    c.addEventListener('pointermove', onPointerMove);
+    c.addEventListener('pointerup', endDrag);
+    c.addEventListener('pointercancel', endDrag);
+  });
 
   // Collapsible panels
   document.querySelectorAll('.panel').forEach(panel => {
@@ -865,6 +871,17 @@
       document.querySelectorAll('.tab-panel').forEach(p => {
         p.classList.toggle('active', p.dataset.tabContent === name);
       });
+
+      // Swap active canvas DOM instance
+      if (name === 'pattern') {
+        canvas = canvasPattern;
+        canvasPattern.style.display = '';
+        canvasLayout.style.display = 'none';
+      } else {
+        canvas = canvasLayout;
+        canvasLayout.style.display = '';
+        canvasPattern.style.display = 'none';
+      }
 
       redraw();
     });
