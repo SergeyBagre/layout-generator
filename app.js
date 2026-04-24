@@ -982,8 +982,8 @@
         groupEl.appendChild(hitRect);
 
         const curFs = kind === 'title' ? TITLE_FS_D : LOGO_H_D;
-        const indicatorR = Math.max(8, curFs * 0.28 * 2);
-        const hitR = Math.max(44, indicatorR * 4);
+        const indicatorR = 8;
+        const hitR = 44;
         const offset = 8;
         const ax = bbx + bbw + offset;
         const ay = bby + bbh + offset;
