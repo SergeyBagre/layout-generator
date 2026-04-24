@@ -162,6 +162,42 @@
             </div>
           </div>
         </div>
+
+        <div class="panel" data-panel="design-title">
+          <button class="panel-header" type="button">
+            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 4h8M8 4v8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <span class="panel-title">Заголовок и логотип</span>
+            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="panel-body">
+            <div class="field">
+              <label>Текст заголовка</label>
+              <textarea id="titleInputDesign" rows="3">Заголовок дизайна</textarea>
+            </div>
+            <div class="field">
+              <label>Отступ (от краёв) <span class="val editable" data-target="titlePadInputDesign" data-suffix=" px" id="titlePadValDesign">100 px</span></label>
+              <input type="range" id="titlePadInputDesign" min="0" max="800" step="1" value="100">
+            </div>
+            <div class="field">
+              <label>Размер шрифта <span class="val editable" data-target="titleFsInputDesign" data-suffix=" px" id="titleFsValDesign">72 px</span></label>
+              <input type="range" id="titleFsInputDesign" min="16" max="200" step="1" value="72">
+            </div>
+            <div class="field">
+              <label>Высота логотипа <span class="val editable" data-target="logoHInputDesign" data-suffix=" px" id="logoHValDesign">48 px</span></label>
+              <input type="range" id="logoHInputDesign" min="16" max="200" step="1" value="48">
+            </div>
+            <div class="field">
+              <label class="field-check">
+                <input type="checkbox" id="swapInputDesign">
+                Поменять местами заголовок и логотип
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="tab-panel" data-tab-content="layout">

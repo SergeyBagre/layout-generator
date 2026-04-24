@@ -30,6 +30,14 @@
   const textEnabledInDesign = document.getElementById('textEnabledInputDesign');
   const textEnabledLabelDesign = document.getElementById('textEnabledLabelDesign');
   const textControlsElDesign = document.getElementById('textControlsDesign');
+  const titleInDesign = document.getElementById('titleInputDesign');
+  const titleFsInDesign = document.getElementById('titleFsInputDesign');
+  const titleFsValDesign = document.getElementById('titleFsValDesign');
+  const titlePadInDesign = document.getElementById('titlePadInputDesign');
+  const titlePadValDesign = document.getElementById('titlePadValDesign');
+  const logoHInDesign = document.getElementById('logoHInputDesign');
+  const logoHValDesign = document.getElementById('logoHValDesign');
+  const swapInDesign = document.getElementById('swapInputDesign');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -75,6 +83,11 @@
   let FS_D = 16;
   let TEXT1_D = text1InDesign.value, TEXT2_D = text2InDesign.value;
   let TEXT_ENABLED_D = textEnabledInDesign.checked;
+  let TITLE_TEXT_D = titleInDesign.value;
+  let TITLE_FS_D = +titleFsInDesign.value;
+  let TITLE_PAD_D = +titlePadInDesign.value;
+  let LOGO_H_D = +logoHInDesign.value;
+  let SWAP_D = swapInDesign.checked;
 
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -871,6 +884,78 @@
       return g;
     }
 
+    if (activeTab === 'design') {
+      function buildTitleGroupDesign() {
+        if (!TITLE_TEXT_D.trim()) return null;
+        const g = document.createElementNS(svgNS, 'g');
+        g.dataset.role = 'title';
+        const lsPx = TITLE_FS_D * (TITLE_LS_PERCENT / 100);
+        const lh = titleLineHeight(TITLE_FS_D);
+        const lines = TITLE_TEXT_D.split('\n');
+        lines.forEach((line, i) => {
+          const t = document.createElementNS(svgNS, 'text');
+          t.setAttribute('text-anchor', 'start');
+          t.setAttribute('fill', 'white');
+          t.setAttribute('font-size', TITLE_FS_D);
+          t.setAttribute('font-family', 'Inter, sans-serif');
+          t.setAttribute('font-weight', '600');
+          t.setAttribute('style', 'font-weight:600;font-synthesis:none;-webkit-font-synthesis:none;');
+          t.setAttribute('letter-spacing', lsPx);
+          t.setAttribute('pointer-events', 'none');
+          t.setAttribute('data-line-index', i);
+          t.textContent = line;
+          g.appendChild(t);
+        });
+        g._placeTop = function (padX, padY) {
+          const lns = g.querySelectorAll('text');
+          lns.forEach((t, i) => {
+            t.setAttribute('x', padX);
+            t.setAttribute('y', padY + TITLE_FS_D * 0.82 + i * lh);
+          });
+        };
+        g._placeBottom = function (padX, padY) {
+          const n = g.querySelectorAll('text').length;
+          const totalH = (n - 1) * lh + TITLE_FS_D;
+          const topY = H_D - padY - totalH;
+          g._placeTop(padX, topY);
+        };
+        return g;
+      }
+      function buildLogoGroupDesign() {
+        const g = document.createElementNS(svgNS, 'g');
+        g.dataset.role = 'logo';
+        g.setAttribute('pointer-events', 'none');
+        const inner = document.createElementNS(svgNS, 'g');
+        LOGO_PATHS.forEach(d => {
+          const p = document.createElementNS(svgNS, 'path');
+          p.setAttribute('d', d);
+          p.setAttribute('fill', 'white');
+          inner.appendChild(p);
+        });
+        const tag = document.createElementNS(svgNS, 'path');
+        tag.setAttribute('d', LOGO_TAGLINE);
+        tag.setAttribute('fill', 'white');
+        inner.appendChild(tag);
+        g.appendChild(inner);
+        const scale = LOGO_H_D / LOGO_VB_H;
+        const drawH = LOGO_VB_H * scale;
+        g._placeTop = function (padX, padY) {
+          inner.setAttribute('transform', `translate(${padX}, ${padY}) scale(${scale})`);
+        };
+        g._placeBottom = function (padX, padY) {
+          const topY = H_D - padY - drawH;
+          inner.setAttribute('transform', `translate(${padX}, ${topY}) scale(${scale})`);
+        };
+        return g;
+      }
+      const titleGD = buildTitleGroupDesign();
+      const logoGD = buildLogoGroupDesign();
+      const topElD = SWAP_D ? logoGD : titleGD;
+      const bottomElD = SWAP_D ? titleGD : logoGD;
+      if (topElD) { topElD._placeTop(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(topElD); }
+      if (bottomElD) { bottomElD._placeBottom(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(bottomElD); }
+    }
+
     if (activeTab === 'layout') {
       const titleG = buildTitleGroup();
       const logoG = buildLogoGroup();
@@ -1478,6 +1563,12 @@
     if (activeTab === 'design') redraw();
   });
   applyTextEnabledUIDesign();
+
+  titleInDesign.addEventListener('input', () => { TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
+  titleFsInDesign.addEventListener('input', () => { TITLE_FS_D = +titleFsInDesign.value; titleFsValDesign.textContent = TITLE_FS_D + ' px'; if (activeTab === 'design') redraw(); });
+  titlePadInDesign.addEventListener('input', () => { TITLE_PAD_D = +titlePadInDesign.value; titlePadValDesign.textContent = TITLE_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
+  logoHInDesign.addEventListener('input', () => { LOGO_H_D = +logoHInDesign.value; logoHValDesign.textContent = LOGO_H_D + ' px'; if (activeTab === 'design') redraw(); });
+  swapInDesign.addEventListener('change', () => { SWAP_D = swapInDesign.checked; if (activeTab === 'design') redraw(); });
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
