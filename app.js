@@ -1061,21 +1061,23 @@
         const g = document.createElementNS(svgNS, 'g');
         g.dataset.role = 'footnote';
         g.setAttribute('pointer-events', 'none');
+        g.setAttribute('transform', `translate(${W_D - FOOT_PAD_D}, ${FOOT_PAD_D})`);
         const lines = FOOT_TEXT_D.split('\n');
         const lineH = FOOT_FS_D * 1.35;
-        const rightEdge = W_D - FOOT_PAD_D;
-        const bottomEdge = H_D - FOOT_PAD_D;
+        const t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('fill', 'white');
+        t.setAttribute('font-size', FOOT_FS_D);
+        t.setAttribute('font-family', 'Inter, sans-serif');
+        t.setAttribute('font-weight', '400');
+        t.setAttribute('text-anchor', 'end');
         lines.forEach((line, i) => {
-          const t = document.createElementNS(svgNS, 'text');
-          t.setAttribute('fill', 'white');
-          t.setAttribute('font-size', FOOT_FS_D);
-          t.setAttribute('font-family', 'Inter, sans-serif');
-          t.setAttribute('font-weight', '400');
-          t.setAttribute('text-anchor', 'start');
-          t.setAttribute('transform', `translate(${rightEdge - i * lineH}, ${bottomEdge}) rotate(-90)`);
-          t.textContent = line;
-          g.appendChild(t);
+          const ts = document.createElementNS(svgNS, 'tspan');
+          ts.setAttribute('x', 0);
+          ts.setAttribute('dy', i === 0 ? FOOT_FS_D * 0.82 : lineH);
+          ts.textContent = line;
+          t.appendChild(ts);
         });
+        g.appendChild(t);
         root.appendChild(g);
       }
     }

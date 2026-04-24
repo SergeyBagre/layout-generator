@@ -188,10 +188,19 @@ html, body {
 .field textarea,
 .field select {
   width: 100%;
-  background: #000;
+  height: 40px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #000;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.5)' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 10px 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 10px 34px 10px 14px;
   color: #fff;
   font-family: inherit;
   font-size: 14px;
@@ -206,17 +215,6 @@ html, body {
 }
 
 .field input[type="number"] { height: 40px; }
-
-.field select {
-  height: 40px;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.5)' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 34px;
-}
 
 .field select option { background: #111; color: #fff; }
 
