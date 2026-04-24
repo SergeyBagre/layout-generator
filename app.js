@@ -36,16 +36,9 @@
   const swapInDesign = document.getElementById('swapInputDesign');
   const logoVisibleInDesign = document.getElementById('logoVisibleInputDesign');
   const headerVisibleInDesign = document.getElementById('headerVisibleInputDesign');
-  const footEnabledInDesign = document.getElementById('footEnabledInputDesign');
-  const footInDesign = document.getElementById('footInputDesign');
-  const footFsInDesign = document.getElementById('footFsInputDesign');
-  const footFsValDesign = document.getElementById('footFsValDesign');
-  const footPadInDesign = document.getElementById('footPadInputDesign');
-  const footPadValDesign = document.getElementById('footPadValDesign');
   const imgFileDesign = document.getElementById('imgFileDesign');
   const fileNameDesign = document.getElementById('fileNameDesign');
   const clearImgBtnDesign = document.getElementById('clearImgBtnDesign');
-  const fitSelectDesign = document.getElementById('fitSelectDesign');
   const scaleInputDesign = document.getElementById('scaleInputDesign');
   const scaleValDesign = document.getElementById('scaleValDesign');
   const titleIn = document.getElementById('titleInput');
@@ -98,13 +91,9 @@
   let SWAP_D = swapInDesign.checked;
   let LOGO_VISIBLE_D = logoVisibleInDesign.checked;
   let HEADER_VISIBLE_D = headerVisibleInDesign.checked;
-  let FOOT_ENABLED_D = footEnabledInDesign.checked;
-  let FOOT_TEXT_D = footInDesign.value;
-  let FOOT_FS_D = +footFsInDesign.value;
-  let FOOT_PAD_D = +footPadInDesign.value;
   let IMG_SRC_D = null;
   let IMG_NATURAL_D = { w: 0, h: 0 };
-  let FIT_D = fitSelectDesign.value;
+  let FIT_D = 'contain';
   let SCALE_D = +scaleInputDesign.value;
   let imgPos_D = null;
   let TITLE_FS_D = 72;
@@ -1056,30 +1045,6 @@
       }
       addTitleLogoHandle(titleGD, 'title');
       addTitleLogoHandle(logoGD, 'logo');
-
-      if (FOOT_ENABLED_D && FOOT_TEXT_D.trim()) {
-        const g = document.createElementNS(svgNS, 'g');
-        g.dataset.role = 'footnote';
-        g.setAttribute('pointer-events', 'none');
-        g.setAttribute('transform', `translate(${W_D - FOOT_PAD_D}, ${FOOT_PAD_D})`);
-        const lines = FOOT_TEXT_D.split('\n');
-        const lineH = FOOT_FS_D * 1.35;
-        const t = document.createElementNS(svgNS, 'text');
-        t.setAttribute('fill', 'white');
-        t.setAttribute('font-size', FOOT_FS_D);
-        t.setAttribute('font-family', 'Inter, sans-serif');
-        t.setAttribute('font-weight', '400');
-        t.setAttribute('text-anchor', 'end');
-        lines.forEach((line, i) => {
-          const ts = document.createElementNS(svgNS, 'tspan');
-          ts.setAttribute('x', 0);
-          ts.setAttribute('dy', i === 0 ? FOOT_FS_D * 0.82 : lineH);
-          ts.textContent = line;
-          t.appendChild(ts);
-        });
-        g.appendChild(t);
-        root.appendChild(g);
-      }
     }
 
     if (activeTab === 'layout') {
@@ -1776,16 +1741,6 @@
     layoutSpacingInDesign.disabled = !spacingEnabled;
     const spacingField = layoutSpacingInDesign.closest('.field');
     if (spacingField) spacingField.classList.toggle('disabled', !spacingEnabled);
-
-    const footOn = FOOT_ENABLED_D;
-    footInDesign.disabled = !footOn;
-    footInDesign.readOnly = !footOn;
-    footFsInDesign.disabled = !footOn;
-    footPadInDesign.disabled = !footOn;
-    [footInDesign, footFsInDesign, footPadInDesign].forEach(el => {
-      const f = el.closest('.field');
-      if (f) f.classList.toggle('disabled', !footOn);
-    });
   }
 
   titleInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D) return; TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
@@ -1795,11 +1750,6 @@
   headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
   applyDependentControlsDesign();
 
-  footEnabledInDesign.addEventListener('change', () => { FOOT_ENABLED_D = footEnabledInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
-  footInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_TEXT_D = footInDesign.value; if (activeTab === 'design') redraw(); });
-  footFsInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_FS_D = +footFsInDesign.value; footFsValDesign.textContent = FOOT_FS_D + ' px'; if (activeTab === 'design') redraw(); });
-  footPadInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_PAD_D = +footPadInDesign.value; footPadValDesign.textContent = FOOT_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
-  fitSelectDesign.addEventListener('change', () => { FIT_D = fitSelectDesign.value; imgPos_D = null; if (activeTab === 'design') redraw(); });
   scaleInputDesign.addEventListener('input', () => { SCALE_D = +scaleInputDesign.value; scaleValDesign.textContent = SCALE_D + ' %'; if (activeTab === 'design') redraw(); });
   imgFileDesign.addEventListener('change', (e) => {
     const file = e.target.files[0]; if (!file) return;

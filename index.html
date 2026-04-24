@@ -199,40 +199,6 @@
           </div>
         </div>
 
-        <div class="panel" data-panel="design-footnote">
-          <button class="panel-header" type="button">
-            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 12h10M3 8h7M3 4h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-            <span class="panel-title">Сноска</span>
-            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <div class="panel-body">
-            <div class="toggle-row">
-              <span class="toggle-label">Сноска</span>
-              <label class="switch">
-                <input type="checkbox" id="footEnabledInputDesign">
-                <span class="switch-slider"></span>
-              </label>
-            </div>
-            <div class="field field-spaced">
-              <label>Текст сноски</label>
-              <textarea id="footInputDesign" rows="3">АО «Банк Пример», ОГРН 1027700000000, ИНН 7700000000. Генеральная лицензия Банка России
-№1234. Условия действительны на дату публикации. Не является публичной офертой.</textarea>
-            </div>
-            <div class="field field-spaced">
-              <label>Отступ <span class="val editable" data-target="footPadInputDesign" data-suffix=" px" id="footPadValDesign">100 px</span></label>
-              <input type="range" id="footPadInputDesign" min="0" max="800" step="1" value="100">
-            </div>
-            <div class="field field-spaced">
-              <label>Размер шрифта <span class="val editable" data-target="footFsInputDesign" data-suffix=" px" id="footFsValDesign">10 px</span></label>
-              <input type="range" id="footFsInputDesign" min="8" max="40" step="1" value="10">
-            </div>
-          </div>
-        </div>
-
         <div class="panel" data-panel="design-image">
           <button class="panel-header" type="button">
             <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -256,14 +222,6 @@
               </label>
               <input type="file" id="imgFileDesign" accept="image/*">
               <button id="clearImgBtnDesign" class="inline-btn">Удалить</button>
-            </div>
-            <div class="field">
-              <label>Режим</label>
-              <select id="fitSelectDesign">
-                <option value="contain">Вписать полностью</option>
-                <option value="cover">Заполнить с обрезкой</option>
-                <option value="fill">Растянуть</option>
-              </select>
             </div>
             <div class="field">
               <label>Масштаб <span class="val editable" data-target="scaleInputDesign" data-suffix=" %" id="scaleValDesign">100 %</span></label>
