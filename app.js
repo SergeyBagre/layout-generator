@@ -1061,6 +1061,7 @@
         const g = document.createElementNS(svgNS, 'g');
         g.dataset.role = 'footnote';
         g.setAttribute('pointer-events', 'none');
+        g.setAttribute('transform', `rotate(180, ${W_D / 2}, ${H_D / 2})`);
         const lines = FOOT_TEXT_D.split('\n');
         const lineH = FOOT_FS_D * 1.35;
         const rightEdge = W_D - FOOT_PAD_D;
