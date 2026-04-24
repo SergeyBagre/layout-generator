@@ -725,6 +725,11 @@ body.light-theme .switch input:checked + .switch-slider {
   opacity: 1;
   pointer-events: all;
 }
+#canvasDesign g[data-role="title"].tl-hover .tl-anchor,
+#canvasDesign g[data-role="logo"].tl-hover .tl-anchor {
+  opacity: 1;
+  pointer-events: all;
+}
 
 /* Inline text editor overlay on canvas */
 .inline-text-editor {

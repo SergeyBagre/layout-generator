@@ -954,6 +954,72 @@
       const bottomElD = SWAP_D ? titleGD : logoGD;
       if (topElD) { topElD._placeTop(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(topElD); }
       if (bottomElD) { bottomElD._placeBottom(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(bottomElD); }
+
+      function addTitleLogoHandle(groupEl, kind) {
+        if (!groupEl) return;
+        svg.appendChild(root);
+        const oldForMeasure = canvas.firstChild;
+        if (oldForMeasure) canvas.replaceChild(svg, oldForMeasure); else canvas.appendChild(svg);
+        let bbx = 0, bby = 0, bbw = 0, bbh = 0;
+        try {
+          const b = groupEl.getBBox();
+          bbx = b.x; bby = b.y; bbw = b.width; bbh = b.height;
+        } catch (_) {}
+        canvas.removeChild(svg);
+        if (bbw <= 0 || bbh <= 0) return;
+
+        const pad = 2;
+        const hitRect = document.createElementNS(svgNS, 'rect');
+        hitRect.setAttribute('x', bbx - pad);
+        hitRect.setAttribute('y', bby - pad);
+        hitRect.setAttribute('width', bbw + pad * 2);
+        hitRect.setAttribute('height', bbh + pad * 2);
+        hitRect.setAttribute('fill', 'transparent');
+        hitRect.setAttribute('pointer-events', 'all');
+        hitRect.classList.add('tl-hit');
+        hitRect.dataset.kind = kind;
+        hitRect.dataset.export = 'skip';
+        groupEl.appendChild(hitRect);
+
+        const curFs = kind === 'title' ? TITLE_FS_D : LOGO_H_D;
+        const indicatorR = Math.max(8, curFs * 0.28 * 2);
+        const hitR = Math.max(44, indicatorR * 4);
+        const offset = 8;
+        const ax = bbx + bbw + offset;
+        const ay = bby + bbh + offset;
+        const anchorG = document.createElementNS(svgNS, 'g');
+        anchorG.classList.add('anchor-indicator', 'tl-anchor');
+        anchorG.dataset.role = 'tl-resize';
+        anchorG.dataset.kind = kind;
+        anchorG.dataset.cornerX = 'right';
+        anchorG.dataset.cornerY = 'bottom';
+        anchorG.dataset.export = 'skip';
+        anchorG.style.cursor = 'nwse-resize';
+        anchorG.setAttribute('transform', `translate(${ax}, ${ay})`);
+
+        const anchorHit = document.createElementNS(svgNS, 'circle');
+        anchorHit.setAttribute('cx', 0);
+        anchorHit.setAttribute('cy', 0);
+        anchorHit.setAttribute('r', hitR);
+        anchorHit.setAttribute('fill', 'transparent');
+        anchorHit.setAttribute('pointer-events', 'all');
+        anchorHit.dataset.export = 'skip';
+        anchorG.appendChild(anchorHit);
+
+        const anchorDot = document.createElementNS(svgNS, 'circle');
+        anchorDot.setAttribute('cx', 0);
+        anchorDot.setAttribute('cy', 0);
+        anchorDot.setAttribute('r', indicatorR);
+        anchorDot.setAttribute('fill', '#84A7BA');
+        anchorDot.setAttribute('pointer-events', 'none');
+        anchorDot.classList.add('anchor-dot');
+        anchorDot.dataset.export = 'skip';
+        anchorG.appendChild(anchorDot);
+
+        groupEl.appendChild(anchorG);
+      }
+      addTitleLogoHandle(titleGD, 'title');
+      addTitleLogoHandle(logoGD, 'logo');
     }
 
     if (activeTab === 'layout') {
@@ -1014,6 +1080,31 @@
     if (drag.ownerTab && drag.ownerTab !== activeTab) { pendingEvent = null; return; }
     const e = pendingEvent; pendingEvent = null;
     const pt = getSvgPointFromEvent(e); if (!pt) return;
+    if (drag.role === 'tl-resize') {
+      const dx = pt.x - drag.startPt.x;
+      const dy = pt.y - drag.startPt.y;
+      const signed = dx + dy;
+      if (drag.kind === 'title') {
+        const newFs = clamp(Math.round(drag.startFs + signed), 16, 400);
+        if (newFs !== TITLE_FS_D) {
+          TITLE_FS_D = newFs;
+          titleFsInDesign.value = newFs;
+          titleFsValDesign.textContent = newFs + ' px';
+          drag.moved = true;
+          redraw();
+        }
+      } else if (drag.kind === 'logo') {
+        const newH = clamp(Math.round(drag.startFs + signed), 16, 400);
+        if (newH !== LOGO_H_D) {
+          LOGO_H_D = newH;
+          logoHInDesign.value = newH;
+          logoHValDesign.textContent = newH + ' px';
+          drag.moved = true;
+          redraw();
+        }
+      }
+      return;
+    }
     if (drag.role === 'text-resize') {
       const dx = pt.x - drag.startPt.x;
       const dy = pt.y - drag.startPt.y;
@@ -1086,6 +1177,22 @@
         e.preventDefault();
         e.stopPropagation();
         const pt = getSvgPointFromEvent(e); if (!pt) return;
+        if (anchorTarget.dataset.role === 'tl-resize') {
+          const kind = anchorTarget.dataset.kind;
+          const startFs = kind === 'title' ? TITLE_FS_D : LOGO_H_D;
+          try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+          drag = {
+            role: 'tl-resize',
+            kind: kind,
+            pointerId: e.pointerId,
+            startPt: pt,
+            startFs: startFs,
+            ownerTab: activeTab,
+          };
+          const groupEl = canvasDesign.querySelector(`g[data-role="${kind}"]`);
+          if (groupEl) groupEl.classList.add('tl-hover');
+          return;
+        }
         const curFs = activeTab === 'pattern'
           ? (s1Fs != null ? s1Fs : FS)
           : (activeTab === 'design'
@@ -1169,6 +1276,8 @@
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
     if (drag.el) drag.el.classList.remove('active');
     const wasTextResize = drag.role === 'text-resize';
+    const wasTlResize = drag.role === 'tl-resize';
+    const tlKind = drag.kind;
     const wasPendingClick = drag.pendingClick;
     const clickHit = drag.textHit;
     drag = null; pendingEvent = null;
@@ -1176,6 +1285,10 @@
     if (wasTextResize) {
       const s1g = activeCanvasEl().querySelector(`g.draggable[data-role="${activeS1Role()}"]`);
       if (s1g) s1g.classList.remove('text-hover');
+    }
+    if (wasTlResize && tlKind) {
+      const g = canvasDesign.querySelector(`g[data-role="${tlKind}"]`);
+      if (g) g.classList.remove('tl-hover');
     }
     if (wasPendingClick && clickHit && (!e.detail || e.detail < 2)) {
       const textRole = clickHit.dataset.textRole;
@@ -1320,6 +1433,36 @@
   canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
   canvasDesign.addEventListener('pointermove', updatePatternAnchor);
   canvasDesign.addEventListener('pointerleave', hidePatternAnchor);
+
+  function updateTlHover(e) {
+    if (activeTab !== 'design') return;
+    const titleG = canvasDesign.querySelector('g[data-role="title"]');
+    const logoG = canvasDesign.querySelector('g[data-role="logo"]');
+    const targetEl = e.target.closest('.tl-hit, .tl-anchor');
+    if (drag && drag.role === 'tl-resize') {
+      if (drag.kind === 'title' && titleG) titleG.classList.add('tl-hover');
+      if (drag.kind === 'logo' && logoG) logoG.classList.add('tl-hover');
+      return;
+    }
+    const groups = [titleG, logoG];
+    if (!targetEl) {
+      groups.forEach(g => g && g.classList.remove('tl-hover'));
+      return;
+    }
+    const parentGroup = targetEl.closest('g[data-role="title"], g[data-role="logo"]');
+    groups.forEach(g => {
+      if (!g) return;
+      g.classList.toggle('tl-hover', g === parentGroup);
+    });
+  }
+  canvasDesign.addEventListener('pointermove', updateTlHover);
+  canvasDesign.addEventListener('pointerleave', () => {
+    if (drag && drag.role === 'tl-resize') return;
+    const titleG = canvasDesign.querySelector('g[data-role="title"]');
+    const logoG = canvasDesign.querySelector('g[data-role="logo"]');
+    if (titleG) titleG.classList.remove('tl-hover');
+    if (logoG) logoG.classList.remove('tl-hover');
+  });
   canvasLayout.addEventListener('pointermove', updatePatternAnchor);
   canvasLayout.addEventListener('pointerleave', hidePatternAnchor);
 
