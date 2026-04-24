@@ -1704,11 +1704,25 @@
   });
   applyTextEnabledUIDesign();
 
-  titleInDesign.addEventListener('input', () => { TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
-  layoutSpacingInDesign.addEventListener('input', () => { LAYOUT_SPACING_D = +layoutSpacingInDesign.value; layoutSpacingValDesign.textContent = LAYOUT_SPACING_D + ' px'; if (activeTab === 'design') redraw(); });
+  function applyDependentControlsDesign() {
+    const headerOn = HEADER_VISIBLE_D;
+    const logoOn = LOGO_VISIBLE_D;
+    const spacingEnabled = headerOn || logoOn;
+    titleInDesign.disabled = !headerOn;
+    titleInDesign.readOnly = !headerOn;
+    const titleField = titleInDesign.closest('.field');
+    if (titleField) titleField.classList.toggle('disabled', !headerOn);
+    layoutSpacingInDesign.disabled = !spacingEnabled;
+    const spacingField = layoutSpacingInDesign.closest('.field');
+    if (spacingField) spacingField.classList.toggle('disabled', !spacingEnabled);
+  }
+
+  titleInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D) return; TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
+  layoutSpacingInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D && !LOGO_VISIBLE_D) return; LAYOUT_SPACING_D = +layoutSpacingInDesign.value; layoutSpacingValDesign.textContent = LAYOUT_SPACING_D + ' px'; if (activeTab === 'design') redraw(); });
   swapInDesign.addEventListener('change', () => { SWAP_D = swapInDesign.checked; if (activeTab === 'design') redraw(); });
-  logoVisibleInDesign.addEventListener('change', () => { LOGO_VISIBLE_D = logoVisibleInDesign.checked; if (activeTab === 'design') redraw(); });
-  headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; if (activeTab === 'design') redraw(); });
+  logoVisibleInDesign.addEventListener('change', () => { LOGO_VISIBLE_D = logoVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
+  headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
+  applyDependentControlsDesign();
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });

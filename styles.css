@@ -630,6 +630,16 @@ body.light-theme .switch input:checked + .switch-slider {
   cursor: not-allowed;
 }
 
+.field.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.field.disabled input,
+.field.disabled textarea,
+.field.disabled .val.editable {
+  cursor: not-allowed;
+}
+
 /* === Pattern tab: improved spacing and slider interaction feedback === */
 .tab-panel[data-tab-content="pattern"] .panel-body {
   gap: 16px;
