@@ -647,7 +647,7 @@
         });
       }
 
-      if (showText && TEXT_ENABLED && (role === 's1' || role === 's2')) {
+      if (showText && (role === 's1' || role === 's2' || role === 's1_D' || role === 's2_D' || role === 's1_L' || role === 's2_L')) {
         root.appendChild(g);
         svg.appendChild(root);
         const oldForMeasure = canvas.firstChild;
