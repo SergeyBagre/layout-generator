@@ -1061,11 +1061,10 @@
         const g = document.createElementNS(svgNS, 'g');
         g.dataset.role = 'footnote';
         g.setAttribute('pointer-events', 'none');
-        g.setAttribute('transform', `rotate(180, ${W_D / 2}, ${H_D / 2})`);
         const lines = FOOT_TEXT_D.split('\n');
         const lineH = FOOT_FS_D * 1.35;
         const rightEdge = W_D - FOOT_PAD_D;
-        const topEdge = FOOT_PAD_D;
+        const bottomEdge = H_D - FOOT_PAD_D;
         lines.forEach((line, i) => {
           const t = document.createElementNS(svgNS, 'text');
           t.setAttribute('fill', 'white');
@@ -1073,7 +1072,7 @@
           t.setAttribute('font-family', 'Inter, sans-serif');
           t.setAttribute('font-weight', '400');
           t.setAttribute('text-anchor', 'start');
-          t.setAttribute('transform', `translate(${rightEdge - i * lineH}, ${topEdge}) rotate(90)`);
+          t.setAttribute('transform', `translate(${rightEdge - i * lineH}, ${bottomEdge}) rotate(-90)`);
           t.textContent = line;
           g.appendChild(t);
         });
