@@ -19,6 +19,17 @@
   const textEnabledInLayout = document.getElementById('textEnabledInputLayout');
   const textEnabledLabelLayout = document.getElementById('textEnabledLabelLayout');
   const textControlsElLayout = document.getElementById('textControlsLayout');
+
+  // Design tab — fully independent clone of pattern
+  const wInDesign = document.getElementById('wInputDesign');
+  const hInDesign = document.getElementById('hInputDesign');
+  const cInDesign = document.getElementById('cInputDesign');
+  const cValDesign = document.getElementById('cValDesign');
+  const text1InDesign = document.getElementById('text1InputDesign');
+  const text2InDesign = document.getElementById('text2InputDesign');
+  const textEnabledInDesign = document.getElementById('textEnabledInputDesign');
+  const textEnabledLabelDesign = document.getElementById('textEnabledLabelDesign');
+  const textControlsElDesign = document.getElementById('textControlsDesign');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -34,6 +45,7 @@
   const footPadIn = document.getElementById('footPadInput');
   const footPadVal = document.getElementById('footPadVal');
   const canvasPattern = document.getElementById('canvas');
+  const canvasDesign = document.getElementById('canvasDesign');
   const canvasLayout = document.getElementById('canvasLayout');
   let canvas = canvasPattern;
   const downloadBtn = document.getElementById('downloadBtn');
@@ -56,6 +68,13 @@
   let FS_L = 16;
   let TEXT1_L = text1InLayout.value, TEXT2_L = text2InLayout.value;
   let TEXT_ENABLED_L = textEnabledInLayout.checked;
+
+  // Design tab — fully independent state
+  let W_D = +wInDesign.value, H_D = +hInDesign.value;
+  let COUNT_D = +cInDesign.value;
+  let FS_D = 16;
+  let TEXT1_D = text1InDesign.value, TEXT2_D = text2InDesign.value;
+  let TEXT_ENABLED_D = textEnabledInDesign.checked;
 
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -113,6 +132,12 @@
   let s1TextPos = null, s2TextPos = null;
   let s1TextPos_L = null, s2TextPos_L = null;
   let s1Fs_L = null;
+  let s1TextPos_D = null, s2TextPos_D = null;
+  let s1Fs_D = null, s2Fs_D = null;
+  let s1_D = null, s2_D = null, pat_D = null;
+  let currentSq_D = 0;
+  let lastFilled_D = [];
+  let seed_D = Date.now() + 2;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   function rng() { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; }
@@ -396,6 +421,19 @@
       });
     }
 
+    if (activeTab === 'design' && s1_D && s2_D) {
+      const sqD = currentSq_D;
+      lastFilled_D.forEach(({ c, r }) => {
+        const el = document.createElementNS(svgNS, 'rect');
+        el.setAttribute('x', s1_D.x + c * sqD);
+        el.setAttribute('y', s1_D.y + r * sqD);
+        el.setAttribute('width', sqD);
+        el.setAttribute('height', sqD);
+        el.setAttribute('fill', '#0098B6');
+        root.appendChild(el);
+      });
+    }
+
     // Independent layout-canvas colored squares (not shared with pattern)
     if (activeTab === 'layout' && s1_L && s2_L) {
       const sqL = currentSq_L;
@@ -435,6 +473,15 @@
       specialDefs = [
         { sp: s1, lines: TEXT1.split('\n'), textPos: tp1, role: 's1', isFirst: true, sqSize: sq1, fsSize: fs1, showText: TEXT_ENABLED, patternHandles: true, textRole: 'text1', isMaster: true },
         { sp: s2, lines: TEXT2.split('\n'), textPos: tp2, role: 's2', isFirst: false, sqSize: sq2, fsSize: fs2, showText: TEXT_ENABLED, patternHandles: false, textRole: 'text2', isMaster: false }
+      ];
+    } else if (activeTab === 'design' && s1_D && s2_D && pat_D) {
+      const fs1_D = s1Fs_D != null ? s1Fs_D : FS_D;
+      const fs2_D = fs1_D;
+      const tp1_D = s1TextPos_D || pat_D.text1;
+      const tp2_D = s2TextPos_D || pat_D.text2;
+      specialDefs = [
+        { sp: s1_D, lines: TEXT1_D.split('\n'), textPos: tp1_D, role: 's1_D', isFirst: true, sqSize: currentSq_D, fsSize: fs1_D, showText: TEXT_ENABLED_D, patternHandles: true, textRole: 'text1', isMaster: true },
+        { sp: s2_D, lines: TEXT2_D.split('\n'), textPos: tp2_D, role: 's2_D', isFirst: false, sqSize: currentSq_D, fsSize: fs2_D, showText: TEXT_ENABLED_D, patternHandles: false, textRole: 'text2', isMaster: false }
       ];
     } else if (activeTab === 'layout' && s1_L && s2_L && pat_L) {
       const fs1_L = s1Fs_L != null ? s1Fs_L : FS_L;
@@ -1526,11 +1573,18 @@
       if (name === 'pattern') {
         canvas = canvasPattern;
         canvasPattern.style.display = '';
+        canvasDesign.style.display = 'none';
+        canvasLayout.style.display = 'none';
+      } else if (name === 'design') {
+        canvas = canvasDesign;
+        canvasDesign.style.display = '';
+        canvasPattern.style.display = 'none';
         canvasLayout.style.display = 'none';
       } else {
         canvas = canvasLayout;
         canvasLayout.style.display = '';
         canvasPattern.style.display = 'none';
+        canvasDesign.style.display = 'none';
       }
 
       redraw();

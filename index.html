@@ -22,6 +22,13 @@
           </svg>
           <span>Паттерн</span>
         </button>
+        <button class="tab" type="button" data-tab="design">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+          <span>Дизайн</span>
+        </button>
         <button class="tab" type="button" data-tab="layout">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
@@ -88,6 +95,69 @@
               <div class="field field-spaced">
                 <label>Квадрат 2</label>
                 <textarea id="text2Input" rows="2">AQDesk K790</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-panel" data-tab-content="design">
+        <div class="panel" data-panel="design-params">
+          <button class="panel-header" type="button">
+            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 3h4v4H3V3zm0 6h4v4H3V9zm6-6h4v4H9V3zm0 6h4v4H9V9z" stroke="currentColor" stroke-width="1.3"/>
+            </svg>
+            <span class="panel-title">Параметры</span>
+            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="panel-body">
+            <div class="row-pair">
+              <div class="field">
+                <label>Ширина</label>
+                <input type="number" id="wInputDesign" min="300" max="1920" step="10" value="1280">
+              </div>
+              <div class="field">
+                <label>Высота</label>
+                <input type="number" id="hInputDesign" min="300" max="1080" step="10" value="720">
+              </div>
+            </div>
+            <div class="field">
+              <label>Количество квадратов <span class="val editable" data-target="cInputDesign" id="cValDesign">8</span></label>
+              <input type="range" id="cInputDesign" min="2" max="30" step="1" value="8">
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" data-panel="design-squares">
+          <button class="panel-header" type="button">
+            <svg class="panel-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M3 4h10M3 8h10M3 12h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <span class="panel-title">Текст</span>
+            <svg class="panel-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 4.5l3.5 3.5 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="panel-body">
+            <div class="toggle-row">
+              <span class="toggle-label" id="textEnabledLabelDesign">Текст</span>
+              <label class="switch">
+                <input type="checkbox" id="textEnabledInputDesign">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="text-controls" id="textControlsDesign">
+              <div class="field field-spaced">
+                <label>Квадрат 1</label>
+                <textarea id="text1InputDesign" rows="3">В реестре
+российской
+продукции</textarea>
+              </div>
+              <div class="field field-spaced">
+                <label>Квадрат 2</label>
+                <textarea id="text2InputDesign" rows="2">AQDesk K790</textarea>
               </div>
             </div>
           </div>
@@ -291,6 +361,7 @@
     <main class="main-area">
       <div class="canvas-wrap">
         <div id="canvas" data-canvas="pattern"></div>
+        <div id="canvasDesign" data-canvas="design" style="display:none;"></div>
         <div id="canvasLayout" data-canvas="layout" style="display:none;"></div>
       </div>
     </main>
