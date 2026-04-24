@@ -719,7 +719,9 @@ body.light-theme .switch input:checked + .switch-slider {
   transition: opacity 180ms ease;
   pointer-events: none;
 }
-#canvas g.draggable[data-role="s1"].text-hover .anchor-indicator {
+#canvas g.draggable[data-role="s1"].text-hover .anchor-indicator,
+#canvasDesign g.draggable[data-role="s1_D"].text-hover .anchor-indicator,
+#canvasLayout g.draggable[data-role="s1_L"].text-hover .anchor-indicator {
   opacity: 1;
   pointer-events: all;
 }
