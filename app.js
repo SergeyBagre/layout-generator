@@ -1069,7 +1069,7 @@
           t.setAttribute('font-size', FOOT_FS_D);
           t.setAttribute('font-family', 'Inter, sans-serif');
           t.setAttribute('font-weight', '400');
-          t.setAttribute('text-anchor', 'start');
+          t.setAttribute('text-anchor', 'end');
           t.setAttribute('transform', `translate(${W_D - FOOT_PAD_D}, ${H_D - FOOT_PAD_D}) rotate(-90) translate(0, ${-i * lineH})`);
           t.textContent = line;
           g.appendChild(t);
@@ -1772,6 +1772,16 @@
     layoutSpacingInDesign.disabled = !spacingEnabled;
     const spacingField = layoutSpacingInDesign.closest('.field');
     if (spacingField) spacingField.classList.toggle('disabled', !spacingEnabled);
+
+    const footOn = FOOT_ENABLED_D;
+    footInDesign.disabled = !footOn;
+    footInDesign.readOnly = !footOn;
+    footFsInDesign.disabled = !footOn;
+    footPadInDesign.disabled = !footOn;
+    [footInDesign, footFsInDesign, footPadInDesign].forEach(el => {
+      const f = el.closest('.field');
+      if (f) f.classList.toggle('disabled', !footOn);
+    });
   }
 
   titleInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D) return; TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
@@ -1781,10 +1791,10 @@
   headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
   applyDependentControlsDesign();
 
-  footEnabledInDesign.addEventListener('change', () => { FOOT_ENABLED_D = footEnabledInDesign.checked; if (activeTab === 'design') redraw(); });
-  footInDesign.addEventListener('input', () => { FOOT_TEXT_D = footInDesign.value; if (activeTab === 'design') redraw(); });
-  footFsInDesign.addEventListener('input', () => { FOOT_FS_D = +footFsInDesign.value; footFsValDesign.textContent = FOOT_FS_D + ' px'; if (activeTab === 'design') redraw(); });
-  footPadInDesign.addEventListener('input', () => { FOOT_PAD_D = +footPadInDesign.value; footPadValDesign.textContent = FOOT_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
+  footEnabledInDesign.addEventListener('change', () => { FOOT_ENABLED_D = footEnabledInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
+  footInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_TEXT_D = footInDesign.value; if (activeTab === 'design') redraw(); });
+  footFsInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_FS_D = +footFsInDesign.value; footFsValDesign.textContent = FOOT_FS_D + ' px'; if (activeTab === 'design') redraw(); });
+  footPadInDesign.addEventListener('input', () => { if (!FOOT_ENABLED_D) return; FOOT_PAD_D = +footPadInDesign.value; footPadValDesign.textContent = FOOT_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
   fitSelectDesign.addEventListener('change', () => { FIT_D = fitSelectDesign.value; imgPos_D = null; if (activeTab === 'design') redraw(); });
   scaleInputDesign.addEventListener('input', () => { SCALE_D = +scaleInputDesign.value; scaleValDesign.textContent = SCALE_D + ' %'; if (activeTab === 'design') redraw(); });
   imgFileDesign.addEventListener('change', (e) => {
@@ -1804,6 +1814,7 @@
     imgFileDesign.value = ''; fileNameDesign.textContent = 'Выбрать изображение…';
     imgPos_D = null; if (activeTab === 'design') redraw();
   });
+  applyDependentControlsDesign();
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
