@@ -31,13 +31,11 @@
   const textEnabledLabelDesign = document.getElementById('textEnabledLabelDesign');
   const textControlsElDesign = document.getElementById('textControlsDesign');
   const titleInDesign = document.getElementById('titleInputDesign');
-  const titleFsInDesign = document.getElementById('titleFsInputDesign');
-  const titleFsValDesign = document.getElementById('titleFsValDesign');
-  const titlePadInDesign = document.getElementById('titlePadInputDesign');
-  const titlePadValDesign = document.getElementById('titlePadValDesign');
-  const logoHInDesign = document.getElementById('logoHInputDesign');
-  const logoHValDesign = document.getElementById('logoHValDesign');
+  const layoutSpacingInDesign = document.getElementById('layoutSpacingInputDesign');
+  const layoutSpacingValDesign = document.getElementById('layoutSpacingValDesign');
   const swapInDesign = document.getElementById('swapInputDesign');
+  const logoVisibleInDesign = document.getElementById('logoVisibleInputDesign');
+  const headerVisibleInDesign = document.getElementById('headerVisibleInputDesign');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -84,10 +82,13 @@
   let TEXT1_D = text1InDesign.value, TEXT2_D = text2InDesign.value;
   let TEXT_ENABLED_D = textEnabledInDesign.checked;
   let TITLE_TEXT_D = titleInDesign.value;
-  let TITLE_FS_D = +titleFsInDesign.value;
-  let TITLE_PAD_D = +titlePadInDesign.value;
-  let LOGO_H_D = +logoHInDesign.value;
+  let LAYOUT_SPACING_D = +layoutSpacingInDesign.value;
   let SWAP_D = swapInDesign.checked;
+  let LOGO_VISIBLE_D = logoVisibleInDesign.checked;
+  let HEADER_VISIBLE_D = headerVisibleInDesign.checked;
+  let TITLE_FS_D = 72;
+  let TITLE_PAD_D = 100;
+  let LOGO_H_D = 48;
 
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -948,12 +949,12 @@
         };
         return g;
       }
-      const titleGD = buildTitleGroupDesign();
-      const logoGD = buildLogoGroupDesign();
+      const titleGD = HEADER_VISIBLE_D ? buildTitleGroupDesign() : null;
+      const logoGD = LOGO_VISIBLE_D ? buildLogoGroupDesign() : null;
       const topElD = SWAP_D ? logoGD : titleGD;
       const bottomElD = SWAP_D ? titleGD : logoGD;
-      if (topElD) { topElD._placeTop(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(topElD); }
-      if (bottomElD) { bottomElD._placeBottom(TITLE_PAD_D, TITLE_PAD_D); root.appendChild(bottomElD); }
+      if (topElD) { topElD._placeTop(LAYOUT_SPACING_D, LAYOUT_SPACING_D); root.appendChild(topElD); }
+      if (bottomElD) { bottomElD._placeBottom(LAYOUT_SPACING_D, LAYOUT_SPACING_D); root.appendChild(bottomElD); }
 
       function addTitleLogoHandle(groupEl, kind) {
         if (!groupEl) return;
@@ -1088,8 +1089,6 @@
         const newFs = clamp(Math.round(drag.startFs + signed), 16, 400);
         if (newFs !== TITLE_FS_D) {
           TITLE_FS_D = newFs;
-          titleFsInDesign.value = newFs;
-          titleFsValDesign.textContent = newFs + ' px';
           drag.moved = true;
           redraw();
         }
@@ -1097,8 +1096,6 @@
         const newH = clamp(Math.round(drag.startFs + signed), 16, 400);
         if (newH !== LOGO_H_D) {
           LOGO_H_D = newH;
-          logoHInDesign.value = newH;
-          logoHValDesign.textContent = newH + ' px';
           drag.moved = true;
           redraw();
         }
@@ -1708,10 +1705,10 @@
   applyTextEnabledUIDesign();
 
   titleInDesign.addEventListener('input', () => { TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
-  titleFsInDesign.addEventListener('input', () => { TITLE_FS_D = +titleFsInDesign.value; titleFsValDesign.textContent = TITLE_FS_D + ' px'; if (activeTab === 'design') redraw(); });
-  titlePadInDesign.addEventListener('input', () => { TITLE_PAD_D = +titlePadInDesign.value; titlePadValDesign.textContent = TITLE_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
-  logoHInDesign.addEventListener('input', () => { LOGO_H_D = +logoHInDesign.value; logoHValDesign.textContent = LOGO_H_D + ' px'; if (activeTab === 'design') redraw(); });
+  layoutSpacingInDesign.addEventListener('input', () => { LAYOUT_SPACING_D = +layoutSpacingInDesign.value; layoutSpacingValDesign.textContent = LAYOUT_SPACING_D + ' px'; if (activeTab === 'design') redraw(); });
   swapInDesign.addEventListener('change', () => { SWAP_D = swapInDesign.checked; if (activeTab === 'design') redraw(); });
+  logoVisibleInDesign.addEventListener('change', () => { LOGO_VISIBLE_D = logoVisibleInDesign.checked; if (activeTab === 'design') redraw(); });
+  headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; if (activeTab === 'design') redraw(); });
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
