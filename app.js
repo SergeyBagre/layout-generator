@@ -36,6 +36,18 @@
   const swapInDesign = document.getElementById('swapInputDesign');
   const logoVisibleInDesign = document.getElementById('logoVisibleInputDesign');
   const headerVisibleInDesign = document.getElementById('headerVisibleInputDesign');
+  const footEnabledInDesign = document.getElementById('footEnabledInputDesign');
+  const footInDesign = document.getElementById('footInputDesign');
+  const footFsInDesign = document.getElementById('footFsInputDesign');
+  const footFsValDesign = document.getElementById('footFsValDesign');
+  const footPadInDesign = document.getElementById('footPadInputDesign');
+  const footPadValDesign = document.getElementById('footPadValDesign');
+  const imgFileDesign = document.getElementById('imgFileDesign');
+  const fileNameDesign = document.getElementById('fileNameDesign');
+  const clearImgBtnDesign = document.getElementById('clearImgBtnDesign');
+  const fitSelectDesign = document.getElementById('fitSelectDesign');
+  const scaleInputDesign = document.getElementById('scaleInputDesign');
+  const scaleValDesign = document.getElementById('scaleValDesign');
   const titleIn = document.getElementById('titleInput');
   const titleFsIn = document.getElementById('titleFsInput');
   const titleFsVal = document.getElementById('titleFsVal');
@@ -86,6 +98,15 @@
   let SWAP_D = swapInDesign.checked;
   let LOGO_VISIBLE_D = logoVisibleInDesign.checked;
   let HEADER_VISIBLE_D = headerVisibleInDesign.checked;
+  let FOOT_ENABLED_D = footEnabledInDesign.checked;
+  let FOOT_TEXT_D = footInDesign.value;
+  let FOOT_FS_D = +footFsInDesign.value;
+  let FOOT_PAD_D = +footPadInDesign.value;
+  let IMG_SRC_D = null;
+  let IMG_NATURAL_D = { w: 0, h: 0 };
+  let FIT_D = fitSelectDesign.value;
+  let SCALE_D = +scaleInputDesign.value;
+  let imgPos_D = null;
   let TITLE_FS_D = 72;
   let TITLE_PAD_D = 100;
   let LOGO_H_D = 48;
@@ -564,6 +585,20 @@
       });
     }
 
+    if (activeTab === 'design' && IMG_SRC_D && IMG_NATURAL_D.w > 0 && IMG_NATURAL_D.h > 0) {
+      const size = computeImageSize(IMG_NATURAL_D.w, IMG_NATURAL_D.h, FIT_D, SCALE_D);
+      if (!imgPos_D) imgPos_D = { x: (W_D - size.w) / 2, y: (H_D - size.h) / 2 };
+      const imgEl = document.createElementNS(svgNS, 'image');
+      imgEl.setAttribute('href', IMG_SRC_D);
+      imgEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', IMG_SRC_D);
+      imgEl.setAttribute('x', imgPos_D.x); imgEl.setAttribute('y', imgPos_D.y);
+      imgEl.setAttribute('width', size.w); imgEl.setAttribute('height', size.h);
+      imgEl.setAttribute('preserveAspectRatio', 'none');
+      imgEl.classList.add('draggable');
+      imgEl.dataset.role = 'image_D';
+      root.appendChild(imgEl);
+    }
+
     if (activeTab === 'layout' && IMG_SRC && IMG_NATURAL.w > 0 && IMG_NATURAL.h > 0) {
       const size = computeImageSize(IMG_NATURAL.w, IMG_NATURAL.h, FIT, SCALE);
       if (!imgPos) imgPos = { x: (W - size.w) / 2, y: (H - size.h) / 2 };
@@ -1021,6 +1056,26 @@
       }
       addTitleLogoHandle(titleGD, 'title');
       addTitleLogoHandle(logoGD, 'logo');
+
+      if (FOOT_ENABLED_D && FOOT_TEXT_D.trim()) {
+        const g = document.createElementNS(svgNS, 'g');
+        g.dataset.role = 'footnote';
+        g.setAttribute('pointer-events', 'none');
+        const lines = FOOT_TEXT_D.split('\n');
+        const lineH = FOOT_FS_D * 1.35;
+        lines.forEach((line, i) => {
+          const t = document.createElementNS(svgNS, 'text');
+          t.setAttribute('fill', 'white');
+          t.setAttribute('font-size', FOOT_FS_D);
+          t.setAttribute('font-family', 'Inter, sans-serif');
+          t.setAttribute('font-weight', '400');
+          t.setAttribute('text-anchor', 'start');
+          t.setAttribute('transform', `translate(${W_D - FOOT_PAD_D}, ${H_D - FOOT_PAD_D}) rotate(-90) translate(0, ${-i * lineH})`);
+          t.textContent = line;
+          g.appendChild(t);
+        });
+        root.appendChild(g);
+      }
     }
 
     if (activeTab === 'layout') {
@@ -1145,6 +1200,7 @@
     else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2_L' && activeTab === 'layout') { const sq = currentSq_L; s2_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s2_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
     else if (drag.role === 'image' && activeTab === 'layout') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
+    else if (drag.role === 'image_D' && activeTab === 'design') { imgPos_D = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
   }
   const onPointerDown = (e) => {
     if (e.currentTarget !== canvas) return;
@@ -1249,7 +1305,7 @@
     }
     const role = target.dataset.role;
     if (activeTab === 'pattern' && role !== 's1' && role !== 's2') return;
-    if (activeTab === 'design' && role !== 's1_D' && role !== 's2_D') return;
+    if (activeTab === 'design' && role !== 's1_D' && role !== 's2_D' && role !== 'image_D') return;
     if (activeTab === 'layout' && role !== 's1_L' && role !== 's2_L' && role !== 'image') return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, ownerTab: activeTab };
@@ -1259,6 +1315,7 @@
     else if (role === 's1_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1_L.x, offsetY: pt.y - s1_L.y, ownerTab: activeTab };
     else if (role === 's2_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2_L.x, offsetY: pt.y - s2_L.y, ownerTab: activeTab };
     else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y, ownerTab: activeTab };
+    else if (role === 'image_D') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos_D.x, offsetY: pt.y - imgPos_D.y, ownerTab: activeTab };
     canvas.classList.add('dragging');
   };
   const onPointerMove = (e) => {
@@ -1723,6 +1780,30 @@
   logoVisibleInDesign.addEventListener('change', () => { LOGO_VISIBLE_D = logoVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
   headerVisibleInDesign.addEventListener('change', () => { HEADER_VISIBLE_D = headerVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
   applyDependentControlsDesign();
+
+  footEnabledInDesign.addEventListener('change', () => { FOOT_ENABLED_D = footEnabledInDesign.checked; if (activeTab === 'design') redraw(); });
+  footInDesign.addEventListener('input', () => { FOOT_TEXT_D = footInDesign.value; if (activeTab === 'design') redraw(); });
+  footFsInDesign.addEventListener('input', () => { FOOT_FS_D = +footFsInDesign.value; footFsValDesign.textContent = FOOT_FS_D + ' px'; if (activeTab === 'design') redraw(); });
+  footPadInDesign.addEventListener('input', () => { FOOT_PAD_D = +footPadInDesign.value; footPadValDesign.textContent = FOOT_PAD_D + ' px'; if (activeTab === 'design') redraw(); });
+  fitSelectDesign.addEventListener('change', () => { FIT_D = fitSelectDesign.value; imgPos_D = null; if (activeTab === 'design') redraw(); });
+  scaleInputDesign.addEventListener('input', () => { SCALE_D = +scaleInputDesign.value; scaleValDesign.textContent = SCALE_D + ' %'; if (activeTab === 'design') redraw(); });
+  imgFileDesign.addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    fileNameDesign.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      IMG_SRC_D = ev.target.result;
+      const tmp = new Image();
+      tmp.onload = () => { IMG_NATURAL_D = { w: tmp.naturalWidth, h: tmp.naturalHeight }; imgPos_D = null; if (activeTab === 'design') redraw(); };
+      tmp.src = IMG_SRC_D;
+    };
+    reader.readAsDataURL(file);
+  });
+  clearImgBtnDesign.addEventListener('click', () => {
+    IMG_SRC_D = null; IMG_NATURAL_D = { w: 0, h: 0 };
+    imgFileDesign.value = ''; fileNameDesign.textContent = 'Выбрать изображение…';
+    imgPos_D = null; if (activeTab === 'design') redraw();
+  });
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
