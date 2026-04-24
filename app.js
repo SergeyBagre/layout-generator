@@ -281,6 +281,98 @@
   }
   // === END INDEPENDENT LAYOUT-CANVAS SYSTEM ===
 
+  // === INDEPENDENT DESIGN-CANVAS SYSTEM (clone of pattern, isolated state) ===
+  function rng_D() { seed_D = (seed_D * 1664525 + 1013904223) & 0xffffffff; return (seed_D >>> 0) / 0xffffffff; }
+  function shuffle_D(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng_D() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function pick_D(arr) { return arr[Math.floor(rng_D() * arr.length)]; }
+
+  function currentSquareSize_D() {
+    return Math.floor(Math.min(W_D, H_D) / 3);
+  }
+
+  function textPosForDelta_D(dx, dy) {
+    const sx = Math.sign(dx) || 1, sy = Math.sign(dy) || 1;
+    return offsetPatterns.find(p => p.dx === sx && p.dy === sy) || offsetPatterns[0];
+  }
+
+  function randomizeSpecials_D() {
+    const sq = currentSquareSize_D();
+    const overlapRatio = 0.4 + rng_D() * 0.2;
+    const offsetDist = sq * (1 - overlapRatio);
+    const chosenPat = pick_D(offsetPatterns);
+    const dx = chosenPat.dx * offsetDist, dy = chosenPat.dy * offsetDist;
+    const s1xMin = Math.max(0, -dx), s1xMax = Math.min(W_D - sq, W_D - sq - dx);
+    const s1yMin = Math.max(0, -dy), s1yMax = Math.min(H_D - sq, H_D - sq - dy);
+    const s1x = Math.round(s1xMin + rng_D() * Math.max(0, s1xMax - s1xMin));
+    const s1y = Math.round(s1yMin + rng_D() * Math.max(0, s1yMax - s1yMin));
+    s1_D = { x: s1x, y: s1y };
+    s2_D = { x: Math.round(s1x + dx), y: Math.round(s1y + dy) };
+    pat_D = chosenPat;
+  }
+
+  function generate_D() {
+    const sq = currentSquareSize_D();
+    currentSq_D = sq;
+    if (!s1_D || !s2_D) randomizeSpecials_D();
+    s1_D.x = clamp(s1_D.x, 0, W_D - sq); s1_D.y = clamp(s1_D.y, 0, H_D - sq);
+    s2_D.x = clamp(s2_D.x, 0, W_D - sq); s2_D.y = clamp(s2_D.y, 0, H_D - sq);
+    pat_D = textPosForDelta_D(s2_D.x - s1_D.x, s2_D.y - s1_D.y);
+
+    const s2Rect = { x: s2_D.x, y: s2_D.y, w: sq, h: sq };
+    const overlapsS2Cell = (c, r) => {
+      const x = s1_D.x + c * sq, y = s1_D.y + r * sq;
+      return !(x + sq <= s2Rect.x || x >= s2Rect.x + s2Rect.w || y + sq <= s2Rect.y || y >= s2Rect.y + s2Rect.h);
+    };
+
+    const occupied = new Set();
+    const key = (c, r) => `${c},${r}`;
+    occupied.add(key(0, 0));
+    const filled = [];
+
+    const s2GC = Math.round((s2_D.x - s1_D.x) / sq);
+    const s2GR = Math.round((s2_D.y - s1_D.y) / sq);
+    occupied.add(key(s2GC, s2GR));
+
+    const firstCandidates = shuffle_D(diag.map(([dc, dr]) => ({ c: dc, r: dr })))
+      .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+    if (firstCandidates.length > 0) {
+      const first = firstCandidates[0];
+      occupied.add(key(first.c, first.r));
+      filled.push(first);
+    }
+
+    let attempts = 0;
+    const maxAttempts = COUNT_D * 50;
+    while (filled.length < COUNT_D && attempts < maxAttempts) {
+      attempts++;
+      const anchor = filled[Math.floor(rng_D() * filled.length)];
+      const dir = pick_D(diag);
+      const nc = anchor.c + dir[0], nr = anchor.r + dir[1];
+      if (occupied.has(key(nc, nr))) continue;
+      if (overlapsS2Cell(nc, nr)) continue;
+      occupied.add(key(nc, nr));
+      filled.push({ c: nc, r: nr });
+    }
+
+    if (filled.length < COUNT_D) {
+      const queue = filled.slice();
+      while (filled.length < COUNT_D && queue.length > 0) {
+        const anchor = queue.shift();
+        const candidates = shuffle_D(diag.map(([dc, dr]) => ({ c: anchor.c + dc, r: anchor.r + dr })))
+          .filter(p => !occupied.has(key(p.c, p.r)) && !overlapsS2Cell(p.c, p.r));
+        for (const cand of candidates) {
+          if (filled.length >= COUNT_D) break;
+          occupied.add(key(cand.c, cand.r));
+          filled.push(cand);
+          queue.push(cand);
+        }
+      }
+    }
+    lastFilled_D = filled;
+    render(sq, filled);
+  }
+  // === END INDEPENDENT DESIGN-CANVAS SYSTEM ===
+
   let lastFilled = [];
 
   function generate() {
@@ -356,6 +448,16 @@
       s2_L.x = clamp(s2_L.x, 0, W_L - sq); s2_L.y = clamp(s2_L.y, 0, H_L - sq);
       pat_L = textPosForDelta_L(s2_L.x - s1_L.x, s2_L.y - s1_L.y);
       render(sq, lastFilled_L);
+      return;
+    }
+    if (activeTab === 'design') {
+      const sq = currentSquareSize_D();
+      currentSq_D = sq;
+      if (!s1_D || !s2_D || lastFilled_D.length === 0) { generate_D(); return; }
+      s1_D.x = clamp(s1_D.x, 0, W_D - sq); s1_D.y = clamp(s1_D.y, 0, H_D - sq);
+      s2_D.x = clamp(s2_D.x, 0, W_D - sq); s2_D.y = clamp(s2_D.y, 0, H_D - sq);
+      pat_D = textPosForDelta_D(s2_D.x - s1_D.x, s2_D.y - s1_D.y);
+      render(sq, lastFilled_D);
       return;
     }
     const sq = currentSquareSize();
@@ -839,6 +941,13 @@
           drag.moved = true;
           redraw();
         }
+      } else if (activeTab === 'design') {
+        if (newFs !== s1Fs_D) {
+          s1Fs_D = newFs;
+          FS_D = newFs;
+          drag.moved = true;
+          redraw();
+        }
       } else if (activeTab === 'layout') {
         if (newFs !== s1Fs_L) {
           s1Fs_L = newFs;
@@ -858,6 +967,8 @@
     }
     if (drag.role === 's1' && activeTab === 'pattern') { const sq = currentSq; s1.x = clamp(pt.x - drag.offsetX, 0, W - sq); s1.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2' && activeTab === 'pattern') { const sq = currentSq; s2.x = clamp(pt.x - drag.offsetX, 0, W - sq); s2.y = clamp(pt.y - drag.offsetY, 0, H - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's1_D' && activeTab === 'design') { const sq = currentSq_D; s1_D.x = clamp(pt.x - drag.offsetX, 0, W_D - sq); s1_D.y = clamp(pt.y - drag.offsetY, 0, H_D - sq); drag.moved = true; redraw(); }
+    else if (drag.role === 's2_D' && activeTab === 'design') { const sq = currentSq_D; s2_D.x = clamp(pt.x - drag.offsetX, 0, W_D - sq); s2_D.y = clamp(pt.y - drag.offsetY, 0, H_D - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's1_L' && activeTab === 'layout') { const sq = currentSq_L; s1_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s1_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
     else if (drag.role === 's2_L' && activeTab === 'layout') { const sq = currentSq_L; s2_L.x = clamp(pt.x - drag.offsetX, 0, W_L - sq); s2_L.y = clamp(pt.y - drag.offsetY, 0, H_L - sq); drag.moved = true; redraw(); }
     else if (drag.role === 'image' && activeTab === 'layout') { imgPos = { x: pt.x - drag.offsetX, y: pt.y - drag.offsetY }; drag.moved = true; redraw(); }
@@ -872,6 +983,10 @@
         seed_L = Date.now() + Math.floor(Math.random() * 999999);
         lastFilled_L = [];
         generate_L();
+      } else if (activeTab === 'design') {
+        seed_D = Date.now() + Math.floor(Math.random() * 999999);
+        lastFilled_D = [];
+        generate_D();
       } else {
         seed = Date.now() + Math.floor(Math.random() * 999999);
         lastFilled = [];
@@ -888,7 +1003,9 @@
         const pt = getSvgPointFromEvent(e); if (!pt) return;
         const curFs = activeTab === 'pattern'
           ? (s1Fs != null ? s1Fs : FS)
-          : (s1Fs_L != null ? s1Fs_L : FS_L);
+          : (activeTab === 'design'
+              ? (s1Fs_D != null ? s1Fs_D : FS_D)
+              : (s1Fs_L != null ? s1Fs_L : FS_L));
         const signX = anchorTarget.dataset.cornerX === 'left' ? -1 : 1;
         const signY = anchorTarget.dataset.cornerY === 'top' ? -1 : 1;
         try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
@@ -901,14 +1018,14 @@
           signY: signY,
           ownerTab: activeTab,
         };
-        const s1role = activeTab === 'pattern' ? 's1' : 's1_L';
+        const s1role = activeTab === 'pattern' ? 's1' : (activeTab === 'design' ? 's1_D' : 's1_L');
         const s1g = canvas.querySelector(`g.draggable[data-role="${s1role}"]`);
         if (s1g) s1g.classList.add('text-hover');
         return;
       }
     }
 
-    const textHitTarget = (activeTab === 'pattern' || activeTab === 'layout') ? e.target.closest('.text-hit') : null;
+    const textHitTarget = (activeTab === 'pattern' || activeTab === 'layout' || activeTab === 'design') ? e.target.closest('.text-hit') : null;
     const target = e.target.closest('.draggable');
     if (!target && !textHitTarget) return;
     e.preventDefault();
@@ -920,6 +1037,9 @@
       if (activeTab === 'pattern') {
         if (role === 's1' && s1) { dragRole = 's1'; ox = pt.x - s1.x; oy = pt.y - s1.y; }
         else if (role === 's2' && s2) { dragRole = 's2'; ox = pt.x - s2.x; oy = pt.y - s2.y; }
+      } else if (activeTab === 'design') {
+        if (role === 's1_D' && s1_D) { dragRole = 's1_D'; ox = pt.x - s1_D.x; oy = pt.y - s1_D.y; }
+        else if (role === 's2_D' && s2_D) { dragRole = 's2_D'; ox = pt.x - s2_D.x; oy = pt.y - s2_D.y; }
       } else if (activeTab === 'layout') {
         if (role === 's1_L' && s1_L) { dragRole = 's1_L'; ox = pt.x - s1_L.x; oy = pt.y - s1_L.y; }
         else if (role === 's2_L' && s2_L) { dragRole = 's2_L'; ox = pt.x - s2_L.x; oy = pt.y - s2_L.y; }
@@ -940,10 +1060,13 @@
     }
     const role = target.dataset.role;
     if (activeTab === 'pattern' && role !== 's1' && role !== 's2') return;
+    if (activeTab === 'design' && role !== 's1_D' && role !== 's2_D') return;
     if (activeTab === 'layout' && role !== 's1_L' && role !== 's2_L' && role !== 'image') return;
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
     if (role === 's1') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1.x, offsetY: pt.y - s1.y, ownerTab: activeTab };
     else if (role === 's2') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2.x, offsetY: pt.y - s2.y, ownerTab: activeTab };
+    else if (role === 's1_D') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1_D.x, offsetY: pt.y - s1_D.y, ownerTab: activeTab };
+    else if (role === 's2_D') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2_D.x, offsetY: pt.y - s2_D.y, ownerTab: activeTab };
     else if (role === 's1_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s1_L.x, offsetY: pt.y - s1_L.y, ownerTab: activeTab };
     else if (role === 's2_L') drag = { role, pointerId: e.pointerId, offsetX: pt.x - s2_L.x, offsetY: pt.y - s2_L.y, ownerTab: activeTab };
     else if (role === 'image') drag = { role, pointerId: e.pointerId, offsetX: pt.x - imgPos.x, offsetY: pt.y - imgPos.y, ownerTab: activeTab };
@@ -966,9 +1089,7 @@
     drag = null; pendingEvent = null;
     canvas.classList.remove('dragging');
     if (wasTextResize) {
-      const activeCanvas = activeTab === 'pattern' ? canvasPattern : canvasLayout;
-      const s1role = activeTab === 'pattern' ? 's1' : 's1_L';
-      const s1g = activeCanvas.querySelector(`g.draggable[data-role="${s1role}"]`);
+      const s1g = activeCanvasEl().querySelector(`g.draggable[data-role="${activeS1Role()}"]`);
       if (s1g) s1g.classList.remove('text-hover');
     }
     if (wasPendingClick && clickHit && (!e.detail || e.detail < 2)) {
@@ -998,6 +1119,33 @@
           if (inOther(cornerPoint(ownSp, next))) continue;
           if (textRole === 'text1') s1TextPos = next;
           else s2TextPos = next;
+          break;
+        }
+        redraw();
+      } else if (activeTab === 'design') {
+        const sq = currentSq_D;
+        const ownSp = textRole === 'text1' ? s1_D : s2_D;
+        const otherSp = textRole === 'text1' ? s2_D : s1_D;
+        const cornerPoint = (sp, pos) => {
+          switch (pos) {
+            case 'top-left': return { x: sp.x, y: sp.y };
+            case 'top-right': return { x: sp.x + sq, y: sp.y };
+            case 'bottom-left': return { x: sp.x, y: sp.y + sq };
+            case 'bottom-right': return { x: sp.x + sq, y: sp.y + sq };
+          }
+          return { x: sp.x, y: sp.y };
+        };
+        const inOther = (p) => p.x > otherSp.x && p.x < otherSp.x + sq && p.y > otherSp.y && p.y < otherSp.y + sq;
+        const current = textRole === 'text1'
+          ? (s1TextPos_D || pat_D.text1)
+          : (s2TextPos_D || pat_D.text2);
+        let idx = cycle.indexOf(current);
+        if (idx < 0) idx = 0;
+        for (let i = 1; i <= cycle.length; i++) {
+          const next = cycle[(idx + i) % cycle.length];
+          if (inOther(cornerPoint(ownSp, next))) continue;
+          if (textRole === 'text1') s1TextPos_D = next;
+          else s2TextPos_D = next;
           break;
         }
         redraw();
@@ -1039,10 +1187,14 @@
     if (anchorHideTimer) { clearTimeout(anchorHideTimer); anchorHideTimer = null; }
   }
   function activeS1Role() {
-    return activeTab === 'pattern' ? 's1' : 's1_L';
+    if (activeTab === 'pattern') return 's1';
+    if (activeTab === 'design') return 's1_D';
+    return 's1_L';
   }
   function activeCanvasEl() {
-    return activeTab === 'pattern' ? canvasPattern : canvasLayout;
+    if (activeTab === 'pattern') return canvasPattern;
+    if (activeTab === 'design') return canvasDesign;
+    return canvasLayout;
   }
   function scheduleAnchorHide() {
     cancelAnchorHide();
@@ -1081,10 +1233,12 @@
   }
   canvasPattern.addEventListener('pointermove', updatePatternAnchor);
   canvasPattern.addEventListener('pointerleave', hidePatternAnchor);
+  canvasDesign.addEventListener('pointermove', updatePatternAnchor);
+  canvasDesign.addEventListener('pointerleave', hidePatternAnchor);
   canvasLayout.addEventListener('pointermove', updatePatternAnchor);
   canvasLayout.addEventListener('pointerleave', hidePatternAnchor);
 
-  [canvasPattern, canvasLayout].forEach(c => {
+  [canvasPattern, canvasDesign, canvasLayout].forEach(c => {
     c.addEventListener('pointerdown', onPointerDown, true);
     c.addEventListener('pointermove', onPointerMove);
     c.addEventListener('pointerup', endDrag);
@@ -1101,14 +1255,19 @@
       e.stopPropagation();
       const textRole = hit.dataset.textRole;
       const isLayout = activeTab === 'layout';
+      const isDesign = activeTab === 'design';
       const getText = () => {
         if (isLayout) return textRole === 'text1' ? TEXT1_L : TEXT2_L;
+        if (isDesign) return textRole === 'text1' ? TEXT1_D : TEXT2_D;
         return textRole === 'text1' ? TEXT1 : TEXT2;
       };
       const setText = (v) => {
         if (isLayout) {
           if (textRole === 'text1') { TEXT1_L = v; text1InLayout.value = v; if (activeTab === 'layout') TEXT1 = v; }
           else { TEXT2_L = v; text2InLayout.value = v; if (activeTab === 'layout') TEXT2 = v; }
+        } else if (isDesign) {
+          if (textRole === 'text1') { TEXT1_D = v; text1InDesign.value = v; }
+          else { TEXT2_D = v; text2InDesign.value = v; }
         } else {
           if (textRole === 'text1') { TEXT1 = v; text1In.value = v; }
           else { TEXT2 = v; text2In.value = v; }
@@ -1125,7 +1284,9 @@
       editor.style.height = Math.max(40, rect.height) + 'px';
       const fs = isLayout
         ? (s1Fs_L != null ? s1Fs_L : FS_L)
-        : (textRole === 'text1' ? (s1Fs != null ? s1Fs : FS) : (s2Fs != null ? s2Fs : FS));
+        : (isDesign
+            ? (s1Fs_D != null ? s1Fs_D : FS_D)
+            : (textRole === 'text1' ? (s1Fs != null ? s1Fs : FS) : (s2Fs != null ? s2Fs : FS)));
       const visualScale = rect.height / Math.max(1, parseFloat(hit.getAttribute('height')) || hit.getBBox().height);
       editor.style.fontSize = (fs * visualScale) + 'px';
       document.body.appendChild(editor);
@@ -1150,6 +1311,7 @@
     });
   }
   installDblclickEdit(canvasPattern);
+  installDblclickEdit(canvasDesign);
   installDblclickEdit(canvasLayout);
 
   // Collapsible panels
@@ -1280,6 +1442,42 @@
     if (activeTab === 'layout') redraw();
   });
   applyTextEnabledUILayout();
+
+  // Independent design-tab listeners
+  wInDesign.addEventListener('input', () => {
+    W_D = +wInDesign.value;
+    if (activeTab === 'design') { W = W_D; generate_D(); }
+  });
+  hInDesign.addEventListener('input', () => {
+    H_D = +hInDesign.value;
+    if (activeTab === 'design') { H = H_D; generate_D(); }
+  });
+  cInDesign.addEventListener('input', () => {
+    COUNT_D = +cInDesign.value; cValDesign.textContent = COUNT_D;
+    if (activeTab === 'design') { COUNT = COUNT_D; generate_D(); }
+  });
+  text1InDesign.addEventListener('input', () => {
+    TEXT1_D = text1InDesign.value;
+    if (activeTab === 'design') redraw();
+  });
+  text2InDesign.addEventListener('input', () => {
+    TEXT2_D = text2InDesign.value;
+    if (activeTab === 'design') redraw();
+  });
+  function applyTextEnabledUIDesign() {
+    textControlsElDesign.classList.toggle('disabled', !TEXT_ENABLED_D);
+    text1InDesign.disabled = !TEXT_ENABLED_D;
+    text2InDesign.disabled = !TEXT_ENABLED_D;
+    text1InDesign.readOnly = !TEXT_ENABLED_D;
+    text2InDesign.readOnly = !TEXT_ENABLED_D;
+    textEnabledLabelDesign.textContent = 'Текст';
+  }
+  textEnabledInDesign.addEventListener('change', () => {
+    TEXT_ENABLED_D = textEnabledInDesign.checked;
+    applyTextEnabledUIDesign();
+    if (activeTab === 'design') redraw();
+  });
+  applyTextEnabledUIDesign();
 
   titleIn.addEventListener('input', () => { TITLE_TEXT = titleIn.value; redraw(); });
   titleFsIn.addEventListener('input', () => { TITLE_FS = +titleFsIn.value; titleFsVal.textContent = TITLE_FS + ' px'; redraw(); });
@@ -1499,6 +1697,8 @@
         patternState.lastFilled = deepClone(lastFilled);
         patternState.seed = seed;
         patternState.currentSq = currentSq;
+      } else if (activeTab === 'design') {
+        // design state already lives in _D vars; nothing extra to snapshot
       } else {
         layoutState.inputs = deepClone(snapshotInputs(layoutInputs));
         layoutState.W = W; layoutState.H = H;
@@ -1535,9 +1735,12 @@
         lastFilled = deepClone(patternState.lastFilled) || [];
         seed = patternState.seed;
         currentSq = patternState.currentSq;
+      } else if (name === 'design') {
+        W = W_D; H = H_D;
+        COUNT = COUNT_D; FS = FS_D;
+        TEXT1 = TEXT1_D; TEXT2 = TEXT2_D;
       } else {
         restoreInputs(layoutInputs, deepClone(layoutState.inputs));
-        // Layout has its OWN independent W/H/COUNT/FS/TEXT1/TEXT2
         W = W_L; H = H_L;
         COUNT = COUNT_L; FS = FS_L;
         TEXT1 = TEXT1_L; TEXT2 = TEXT2_L;
