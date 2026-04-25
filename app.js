@@ -1929,18 +1929,40 @@
       if (r400) INTER_FONT_BASE64.regular = await fetchAsBase64(r400);
       if (r600) INTER_FONT_BASE64.semibold = await fetchAsBase64(r600);
     } catch (_) {}
-    try {
-      if (typeof opentype !== 'undefined') {
-        const ttfUrl = 'https://rsms.me/inter/font-files/Inter-SemiBold.otf';
-        const buf = await fetch(ttfUrl).then(r => r.arrayBuffer());
-        INTER_OPENTYPE_FONT = opentype.parse(buf);
-      }
-    } catch (_) {}
+    ensureInterFontLoaded();
   })();
 
-  downloadBtn.addEventListener('click', () => {
+  let _interFontLoadPromise = null;
+  function ensureInterFontLoaded() {
+    if (_interFontLoadPromise) return _interFontLoadPromise;
+    _interFontLoadPromise = (async () => {
+      if (typeof opentype === 'undefined') return null;
+      const ttfUrls = [
+        'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/files/inter-cyrillic-600-normal.woff',
+        'https://cdn.jsdelivr.net/gh/rsms/inter@v3.19/docs/font-files/Inter-SemiBold.otf',
+        'https://rsms.me/inter/font-files/Inter-SemiBold.otf'
+      ];
+      for (const url of ttfUrls) {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) continue;
+          const buf = await r.arrayBuffer();
+          INTER_OPENTYPE_FONT = opentype.parse(buf);
+          if (INTER_OPENTYPE_FONT) return INTER_OPENTYPE_FONT;
+        } catch (_) {}
+      }
+      return null;
+    })();
+    return _interFontLoadPromise;
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    await ensureInterFontLoaded();
     const svgStr = buildCleanSvgString();
     if (!svgStr) return;
+    if (!INTER_OPENTYPE_FONT) {
+      console.warn('Inter font failed to load — title may export as <text> with font fallback');
+    }
     const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1951,6 +1973,7 @@
   });
 
   exportJpgBtn.addEventListener('click', async () => {
+    await ensureInterFontLoaded();
     const svgStr = buildCleanSvgString();
     if (!svgStr) return;
     // Inline Inter font fetch would be complex; rely on system Inter or fallback.
