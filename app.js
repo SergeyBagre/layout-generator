@@ -1013,8 +1013,8 @@
         groupEl.appendChild(hitRect);
 
         const hitR = 44;
-        const offsetX = 20;
-        const offsetY = kind === 'logo' ? 20 : 8;
+        const offsetX = kind === 'logo' ? 25 : 15;
+        const offsetY = kind === 'logo' ? 20 : 3;
         const ax = bbx + bbw + offsetX;
         const ay = bby + bbh + offsetY;
         const anchorG = document.createElementNS(svgNS, 'g');
