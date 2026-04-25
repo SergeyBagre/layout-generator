@@ -378,6 +378,7 @@ html, body {
 }
 
 #canvas,
+#canvasDesign,
 #canvasLayout {
   position: relative;
   overflow: hidden;
@@ -390,18 +391,24 @@ html, body {
 }
 
 #canvas svg,
+#canvasDesign svg,
 #canvasLayout svg { display: block; }
 
 #canvas .draggable,
+#canvasDesign .draggable,
 #canvasLayout .draggable { cursor: grab; }
 #canvas.dragging,
 #canvas.dragging .draggable,
+#canvasDesign.dragging,
+#canvasDesign.dragging .draggable,
 #canvasLayout.dragging,
 #canvasLayout.dragging .draggable { cursor: grabbing; }
 
 #canvas .random-btn,
+#canvasDesign .random-btn,
 #canvasLayout .random-btn { cursor: pointer; }
 #canvas .random-btn:hover circle,
+#canvasDesign .random-btn:hover circle,
 #canvasLayout .random-btn:hover circle { fill: rgba(255, 255, 255, 0.15); }
 
 .theme-toggle {

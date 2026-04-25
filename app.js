@@ -507,6 +507,10 @@
     if (availW <= 0 || availH <= 0) return;
     const scale = Math.min(1, availW / W, availH / H);
     canvas.style.transform = `scale(${scale})`;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.style.marginRight = ((scale - 1) * W) + 'px';
+    canvas.style.marginBottom = ((scale - 1) * H) + 'px';
   }
 
   window.addEventListener('resize', fitCanvasToViewport);
