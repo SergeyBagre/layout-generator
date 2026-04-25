@@ -665,35 +665,42 @@ body.light-theme .switch input:checked + .switch-slider {
 }
 
 .field input[type="range"].active {
-  background: rgba(52, 199, 89, 0.25);
+  background: rgba(0, 152, 182, 0.25);
 }
 
 .field input[type="range"].active::-webkit-slider-thumb {
   transform: scale(1.15);
-  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.18);
-  background: #34c759;
+  box-shadow: 0 0 0 6px rgba(0, 152, 182, 0.22);
+  background: #0098B6;
 }
 
 .field input[type="range"].active::-moz-range-thumb {
   transform: scale(1.15);
-  box-shadow: 0 0 0 6px rgba(52, 199, 89, 0.18);
-  background: #34c759;
+  box-shadow: 0 0 0 6px rgba(0, 152, 182, 0.22);
+  background: #0098B6;
 }
 
 /* Value label feedback during slider interaction */
 .field label .val.val-active {
-  color: #34c759;
-  transition: color 0.25s ease;
+  color: #0098B6;
+  transition: color 0.18s ease;
 }
 
 /* Number input feedback */
 .field input[type="number"] {
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.field input[type="number"].active {
-  border-color: rgba(52, 199, 89, 0.6);
-  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+.field input[type="number"].active,
+.field input[type="number"]:focus {
+  border-color: rgba(0, 152, 182, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 152, 182, 0.18);
+}
+
+.field textarea:focus,
+.field select:focus {
+  border-color: rgba(0, 152, 182, 0.6);
+  box-shadow: 0 0 0 3px rgba(0, 152, 182, 0.18);
 }
 
 /* Pattern square resize handles — visible only on hover */

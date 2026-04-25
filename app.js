@@ -1626,8 +1626,8 @@
     input.addEventListener('change', apply);
     input.addEventListener('blur', apply);
   };
-  handleNumberInput(wIn, 300, 1920, (v) => { W = v; });
-  handleNumberInput(hIn, 300, 1080, (v) => { H = v; });
+  handleNumberInput(wIn, 300, 3000, (v) => { W = v; });
+  handleNumberInput(hIn, 300, 3000, (v) => { H = v; });
 
   // Independent layout-tab number inputs (separate handler — no shared impl)
   const handleLayoutNumberInput = (input, min, max, setter) => {
@@ -1707,11 +1707,13 @@
 
   // Independent design-tab listeners
   wInDesign.addEventListener('input', () => {
-    W_D = +wInDesign.value;
+    W_D = clamp(+wInDesign.value || 300, 300, 3000);
+    wInDesign.value = W_D;
     if (activeTab === 'design') { W = W_D; generate_D(); }
   });
   hInDesign.addEventListener('input', () => {
-    H_D = +hInDesign.value;
+    H_D = clamp(+hInDesign.value || 300, 300, 3000);
+    hInDesign.value = H_D;
     if (activeTab === 'design') { H = H_D; generate_D(); }
   });
   cInDesign.addEventListener('input', () => {
