@@ -1854,11 +1854,12 @@
       if (!el.getAttribute('style')) {
         el.setAttribute('style', `font-weight:${fw};font-synthesis:none;-webkit-font-synthesis:none;`);
       }
+      el.setAttribute('font-family', "'Inter'");
     });
     clone.querySelectorAll('text[data-line-index]').forEach(el => {
       el.setAttribute('font-weight', '600');
       el.setAttribute('style', 'font-weight:600;font-synthesis:none;-webkit-font-synthesis:none;');
-      el.setAttribute('font-family', "'Inter', 'Inter SemiBold', sans-serif");
+      el.setAttribute('font-family', "'Inter'");
     });
     clone.querySelectorAll('.draggable, .dragging, .random-btn').forEach(el => {
       el.classList.remove('draggable', 'dragging', 'random-btn');
@@ -1876,10 +1877,44 @@
       }
     });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `text { font-synthesis: none !important; -webkit-font-synthesis: none !important; } text[data-line-index], text[font-weight="600"] { font-family: 'Inter', 'Inter SemiBold', sans-serif !important; font-weight: 600 !important; }`;
+    let fontFaces = '';
+    if (INTER_FONT_BASE64.regular) {
+      fontFaces += `@font-face{font-family:'Inter';src:url(data:font/woff2;base64,${INTER_FONT_BASE64.regular}) format('woff2');font-weight:400;font-style:normal;}`;
+    }
+    if (INTER_FONT_BASE64.semibold) {
+      fontFaces += `@font-face{font-family:'Inter';src:url(data:font/woff2;base64,${INTER_FONT_BASE64.semibold}) format('woff2');font-weight:600;font-style:normal;}`;
+    }
+    style.textContent = `${fontFaces} text{font-synthesis:none !important;-webkit-font-synthesis:none !important;}`;
     clone.insertBefore(style, clone.firstChild);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   }
+
+  const INTER_FONT_BASE64 = { regular: null, semibold: null };
+  function fetchAsBase64(url) {
+    return fetch(url).then(r => r.arrayBuffer()).then(buf => {
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin);
+    });
+  }
+  (async () => {
+    try {
+      const css = await fetch('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap').then(r => r.text());
+      const matches = [...css.matchAll(/@font-face\s*{[^}]*?font-weight:\s*(\d+)[^}]*?src:\s*url\((https:[^)]+\.woff2)\)[^}]*?unicode-range:\s*([^;]+);/g)];
+      const cyrillicRegex = /U\+0301|U\+04/;
+      const pickByWeight = (weight) => {
+        const cyrillic = matches.find(m => +m[1] === weight && cyrillicRegex.test(m[3]));
+        if (cyrillic) return cyrillic[2];
+        const latin = matches.find(m => +m[1] === weight);
+        return latin ? latin[2] : null;
+      };
+      const r400 = pickByWeight(400);
+      const r600 = pickByWeight(600);
+      if (r400) INTER_FONT_BASE64.regular = await fetchAsBase64(r400);
+      if (r600) INTER_FONT_BASE64.semibold = await fetchAsBase64(r600);
+    } catch (_) {}
+  })();
 
   downloadBtn.addEventListener('click', () => {
     const svgStr = buildCleanSvgString();
