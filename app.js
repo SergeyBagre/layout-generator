@@ -1839,9 +1839,27 @@
     const clone = svg.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    // Remove random button and any data-export="skip" elements
     clone.querySelectorAll('[data-export="skip"]').forEach(el => el.remove());
-    clone.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+    clone.querySelectorAll('[style]').forEach(el => {
+      if (el.tagName.toLowerCase() === 'text') {
+        const fw = el.getAttribute('font-weight');
+        el.setAttribute('style', `font-weight:${fw || 400};font-synthesis:none;-webkit-font-synthesis:none;`);
+      } else {
+        el.removeAttribute('style');
+      }
+    });
+    clone.querySelectorAll('text').forEach(el => {
+      const fw = el.getAttribute('font-weight') || '400';
+      el.setAttribute('font-weight', fw);
+      if (!el.getAttribute('style')) {
+        el.setAttribute('style', `font-weight:${fw};font-synthesis:none;-webkit-font-synthesis:none;`);
+      }
+    });
+    clone.querySelectorAll('text[data-line-index]').forEach(el => {
+      el.setAttribute('font-weight', '600');
+      el.setAttribute('style', 'font-weight:600;font-synthesis:none;-webkit-font-synthesis:none;');
+      el.setAttribute('font-family', "'Inter', 'Inter SemiBold', sans-serif");
+    });
     clone.querySelectorAll('.draggable, .dragging, .random-btn').forEach(el => {
       el.classList.remove('draggable', 'dragging', 'random-btn');
     });
@@ -1858,7 +1876,7 @@
       }
     });
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `text { font-family: 'Inter', 'Inter SemiBold', sans-serif; font-synthesis: none !important; -webkit-font-synthesis: none !important; } text[data-line-index] { font-family: 'Inter', 'Inter SemiBold', sans-serif !important; font-weight: 600 !important; font-synthesis: none !important; -webkit-font-synthesis: none !important; }`;
+    style.textContent = `text { font-synthesis: none !important; -webkit-font-synthesis: none !important; } text[data-line-index], text[font-weight="600"] { font-family: 'Inter', 'Inter SemiBold', sans-serif !important; font-weight: 600 !important; }`;
     clone.insertBefore(style, clone.firstChild);
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
   }
