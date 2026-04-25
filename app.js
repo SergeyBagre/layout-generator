@@ -33,6 +33,10 @@
   const textEnabledLabelDesign = document.getElementById('textEnabledLabelDesign');
   const textControlsElDesign = document.getElementById('textControlsDesign');
   const titleInDesign = document.getElementById('titleInputDesign');
+  const titleFsInDesign = document.getElementById('titleFsInputDesign');
+  const titleFsValDesign = document.getElementById('titleFsValDesign');
+  const logoHInDesign = document.getElementById('logoHInputDesign');
+  const logoHValDesign = document.getElementById('logoHValDesign');
   const layoutSpacingInDesign = document.getElementById('layoutSpacingInputDesign');
   const layoutSpacingValDesign = document.getElementById('layoutSpacingValDesign');
   const swapInDesign = document.getElementById('swapInputDesign');
@@ -98,9 +102,9 @@
   let FIT_D = 'contain';
   let SCALE_D = +scaleInputDesign.value;
   let imgPos_D = null;
-  let TITLE_FS_D = 72;
+  let TITLE_FS_D = +titleFsInDesign.value;
   let TITLE_PAD_D = 100;
-  let LOGO_H_D = 48;
+  let LOGO_H_D = +logoHInDesign.value;
 
   let TITLE_TEXT = titleIn.value;
   let TITLE_FS = +titleFsIn.value;
@@ -1115,6 +1119,8 @@
         const newFs = clamp(Math.round(drag.startFs + signed), 16, 400);
         if (newFs !== TITLE_FS_D) {
           TITLE_FS_D = newFs;
+          titleFsInDesign.value = newFs;
+          titleFsValDesign.textContent = newFs + ' px';
           drag.moved = true;
           redraw();
         }
@@ -1122,6 +1128,8 @@
         const newH = clamp(Math.round(drag.startFs + signed), 16, 400);
         if (newH !== LOGO_H_D) {
           LOGO_H_D = newH;
+          logoHInDesign.value = newH;
+          logoHValDesign.textContent = newH + ' px';
           drag.moved = true;
           redraw();
         }
@@ -1751,12 +1759,22 @@
     titleInDesign.readOnly = !headerOn;
     const titleField = titleInDesign.closest('.field');
     if (titleField) titleField.classList.toggle('disabled', !headerOn);
+    titleFsInDesign.disabled = !headerOn;
+    const titleFsField = titleFsInDesign.closest('.field');
+    if (titleFsField) titleFsField.classList.toggle('disabled', !headerOn);
+    logoHInDesign.disabled = !logoOn;
+    const logoHField = logoHInDesign.closest('.field');
+    if (logoHField) logoHField.classList.toggle('disabled', !logoOn);
     layoutSpacingInDesign.disabled = !spacingEnabled;
     const spacingField = layoutSpacingInDesign.closest('.field');
     if (spacingField) spacingField.classList.toggle('disabled', !spacingEnabled);
   }
 
   titleInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D) return; TITLE_TEXT_D = titleInDesign.value; if (activeTab === 'design') redraw(); });
+  titleFsInDesign.addEventListener('input', () => { TITLE_FS_D = +titleFsInDesign.value; titleFsValDesign.textContent = TITLE_FS_D + ' px'; if (activeTab === 'design') redraw(); });
+  logoHInDesign.addEventListener('input', () => { LOGO_H_D = +logoHInDesign.value; logoHValDesign.textContent = LOGO_H_D + ' px'; if (activeTab === 'design') redraw(); });
+  titleFsValDesign.textContent = TITLE_FS_D + ' px';
+  logoHValDesign.textContent = LOGO_H_D + ' px';
   layoutSpacingInDesign.addEventListener('input', () => { if (!HEADER_VISIBLE_D && !LOGO_VISIBLE_D) return; LAYOUT_SPACING_D = +layoutSpacingInDesign.value; layoutSpacingValDesign.textContent = LAYOUT_SPACING_D + ' px'; if (activeTab === 'design') redraw(); });
   swapInDesign.addEventListener('change', () => { SWAP_D = swapInDesign.checked; if (activeTab === 'design') redraw(); });
   logoVisibleInDesign.addEventListener('change', () => { LOGO_VISIBLE_D = logoVisibleInDesign.checked; applyDependentControlsDesign(); if (activeTab === 'design') redraw(); });
@@ -2152,7 +2170,8 @@
     });
   }
   [wIn, hIn, cIn, fsIn,
-   wInDesign, hInDesign, cInDesign, layoutSpacingInDesign, scaleInputDesign].forEach(attachInteractionFeedback);
+   wInDesign, hInDesign, cInDesign, layoutSpacingInDesign, scaleInputDesign,
+   titleFsInDesign, logoHInDesign].forEach(attachInteractionFeedback);
 
   generate();
 })();
