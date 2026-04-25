@@ -1848,17 +1848,31 @@
         el.removeAttribute('style');
       }
     });
+    if (INTER_OPENTYPE_FONT) {
+      const titleTexts = Array.from(clone.querySelectorAll('text[data-line-index]'));
+      titleTexts.forEach(el => {
+        try {
+          const fs = parseFloat(el.getAttribute('font-size')) || 72;
+          const x = parseFloat(el.getAttribute('x')) || 0;
+          const y = parseFloat(el.getAttribute('y')) || 0;
+          const lsAttr = el.getAttribute('letter-spacing');
+          const ls = lsAttr ? parseFloat(lsAttr) : 0;
+          const text = el.textContent || '';
+          const fontPath = INTER_OPENTYPE_FONT.getPath(text, x, y, fs, { letterSpacing: ls / fs });
+          const d = fontPath.toPathData(3);
+          const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          newPath.setAttribute('d', d);
+          newPath.setAttribute('fill', el.getAttribute('fill') || 'white');
+          el.parentNode.replaceChild(newPath, el);
+        } catch (_) {}
+      });
+    }
     clone.querySelectorAll('text').forEach(el => {
       const fw = el.getAttribute('font-weight') || '400';
       el.setAttribute('font-weight', fw);
       if (!el.getAttribute('style')) {
         el.setAttribute('style', `font-weight:${fw};font-synthesis:none;-webkit-font-synthesis:none;`);
       }
-      el.setAttribute('font-family', "'Inter'");
-    });
-    clone.querySelectorAll('text[data-line-index]').forEach(el => {
-      el.setAttribute('font-weight', '600');
-      el.setAttribute('style', 'font-weight:600;font-synthesis:none;-webkit-font-synthesis:none;');
       el.setAttribute('font-family', "'Inter'");
     });
     clone.querySelectorAll('.draggable, .dragging, .random-btn').forEach(el => {
@@ -1890,6 +1904,7 @@
   }
 
   const INTER_FONT_BASE64 = { regular: null, semibold: null };
+  let INTER_OPENTYPE_FONT = null;
   function fetchAsBase64(url) {
     return fetch(url).then(r => r.arrayBuffer()).then(buf => {
       const bytes = new Uint8Array(buf);
@@ -1913,6 +1928,13 @@
       const r600 = pickByWeight(600);
       if (r400) INTER_FONT_BASE64.regular = await fetchAsBase64(r400);
       if (r600) INTER_FONT_BASE64.semibold = await fetchAsBase64(r600);
+    } catch (_) {}
+    try {
+      if (typeof opentype !== 'undefined') {
+        const ttfUrl = 'https://rsms.me/inter/font-files/Inter-SemiBold.otf';
+        const buf = await fetch(ttfUrl).then(r => r.arrayBuffer());
+        INTER_OPENTYPE_FONT = opentype.parse(buf);
+      }
     } catch (_) {}
   })();
 
