@@ -2151,7 +2151,8 @@
       if (e.buttons === 0) deactivateSoon();
     });
   }
-  [wIn, hIn, cIn].forEach(attachInteractionFeedback);
+  [wIn, hIn, cIn, fsIn,
+   wInDesign, hInDesign, cInDesign, layoutSpacingInDesign, scaleInputDesign].forEach(attachInteractionFeedback);
 
   generate();
 })();

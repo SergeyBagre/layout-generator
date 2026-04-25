@@ -585,7 +585,7 @@ body.light-theme .toggle-label { color: #111; }
   inset: 0;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 999px;
-  transition: background 0.2s;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .switch-slider::before {
@@ -597,15 +597,24 @@ body.light-theme .toggle-label { color: #111; }
   top: 3px;
   background: #fff;
   border-radius: 50%;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .switch input:checked + .switch-slider {
-  background: #34c759;
+  background: #0098B6;
+  box-shadow: 0 0 0 3px rgba(0, 152, 182, 0.18);
 }
 
 .switch input:checked + .switch-slider::before {
   transform: translateX(16px);
+}
+
+.switch:hover .switch-slider {
+  box-shadow: 0 0 0 3px rgba(0, 152, 182, 0.12);
+}
+
+.switch input:focus-visible + .switch-slider {
+  box-shadow: 0 0 0 3px rgba(0, 152, 182, 0.32);
 }
 
 body.light-theme .switch-slider {
@@ -613,7 +622,7 @@ body.light-theme .switch-slider {
 }
 
 body.light-theme .switch input:checked + .switch-slider {
-  background: #34c759;
+  background: #0098B6;
 }
 
 /* Disabled state for text controls */
