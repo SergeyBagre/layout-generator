@@ -1012,8 +1012,6 @@
         hitRect.dataset.export = 'skip';
         groupEl.appendChild(hitRect);
 
-        const curFs = kind === 'title' ? TITLE_FS_D : LOGO_H_D;
-        const indicatorR = 8;
         const hitR = 44;
         const offset = 8;
         const ax = bbx + bbw + offset;
@@ -1037,15 +1035,17 @@
         anchorHit.dataset.export = 'skip';
         anchorG.appendChild(anchorHit);
 
-        const anchorDot = document.createElementNS(svgNS, 'circle');
-        anchorDot.setAttribute('cx', 0);
-        anchorDot.setAttribute('cy', 0);
-        anchorDot.setAttribute('r', indicatorR);
-        anchorDot.setAttribute('fill', '#84A7BA');
-        anchorDot.setAttribute('pointer-events', 'none');
-        anchorDot.classList.add('anchor-dot');
-        anchorDot.dataset.export = 'skip';
-        anchorG.appendChild(anchorDot);
+        const iconG = document.createElementNS(svgNS, 'g');
+        iconG.classList.add('anchor-dot');
+        iconG.setAttribute('pointer-events', 'none');
+        iconG.setAttribute('transform', 'translate(-16, -16)');
+        iconG.dataset.export = 'skip';
+        const iconPath = document.createElementNS(svgNS, 'path');
+        iconPath.setAttribute('d', 'M10.4159 2.66406H21.5893C26.4426 2.66406 29.3359 5.5574 29.3359 10.4107V21.5707C29.3359 26.4374 26.4426 29.3307 21.5893 29.3307H10.4293C5.57594 29.3307 2.6826 26.4374 2.6826 21.5841V10.4107C2.66927 5.5574 5.5626 2.66406 10.4159 2.66406ZM7.0026 13.3307C7.0026 13.8774 7.45594 14.3307 8.0026 14.3307C8.54927 14.3307 9.0026 13.8774 9.0026 13.3307V10.4107L21.5893 22.9974H18.6693C18.1226 22.9974 17.6693 23.4507 17.6693 23.9974C17.6693 24.5441 18.1226 24.9974 18.6693 24.9974H24.0026C24.1359 24.9974 24.2693 24.9707 24.3893 24.9174C24.6293 24.8107 24.8293 24.6241 24.9359 24.3707C24.9759 24.2507 25.0026 24.1307 25.0026 23.9974V18.6641C25.0026 18.1174 24.5493 17.6641 24.0026 17.6641C23.4559 17.6641 23.0026 18.1174 23.0026 18.6641V21.5841L10.4159 8.9974H13.3359C13.8826 8.9974 14.3359 8.54406 14.3359 7.9974C14.3359 7.45073 13.8826 6.9974 13.3359 6.9974H8.0026C7.86927 6.9974 7.74927 7.02406 7.61594 7.0774C7.37594 7.18406 7.17594 7.37073 7.06927 7.62406C7.02927 7.74406 7.0026 7.86406 7.0026 7.9974V13.3307Z');
+        iconPath.setAttribute('fill', '#1A526C');
+        iconPath.setAttribute('fill-opacity', '0.5');
+        iconG.appendChild(iconPath);
+        anchorG.appendChild(iconG);
 
         groupEl.appendChild(anchorG);
       }
