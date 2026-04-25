@@ -1013,9 +1013,10 @@
         groupEl.appendChild(hitRect);
 
         const hitR = 44;
-        const offset = 8;
-        const ax = bbx + bbw + offset;
-        const ay = bby + bbh + offset;
+        const offsetX = 5;
+        const offsetY = kind === 'logo' ? 5 : 8;
+        const ax = bbx + bbw + offsetX;
+        const ay = bby + bbh + offsetY;
         const anchorG = document.createElementNS(svgNS, 'g');
         anchorG.classList.add('anchor-indicator', 'tl-anchor');
         anchorG.dataset.role = 'tl-resize';
