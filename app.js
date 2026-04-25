@@ -3,6 +3,8 @@
   const hIn = document.getElementById('hInput');
   const cIn = document.getElementById('cInput');
   const cVal = document.getElementById('cVal');
+  const fsIn = document.getElementById('fsInput');
+  const fsVal = document.getElementById('fsVal');
   const text1In = document.getElementById('text1Input');
   const text2In = document.getElementById('text2Input');
   const textEnabledIn = document.getElementById('textEnabledInput');
@@ -69,7 +71,7 @@
   const scaleVal = document.getElementById('scaleVal');
 
   let W = +wIn.value, H = +hIn.value, COUNT = +cIn.value;
-  let FS = 16;
+  let FS = +fsIn.value;
   let TEXT1 = text1In.value, TEXT2 = text2In.value;
   let TEXT_ENABLED = textEnabledIn.checked;
 
@@ -1135,6 +1137,8 @@
         if (newFs !== s1Fs) {
           s1Fs = newFs;
           FS = newFs;
+          fsIn.value = newFs;
+          fsVal.textContent = newFs + ' px';
           drag.moved = true;
           redraw();
         }
@@ -1644,6 +1648,13 @@
   handleLayoutNumberInput(hInLayout, 300, 1080, (v) => { H_L = v; });
 
   cIn.addEventListener('input', () => { COUNT = +cIn.value; cVal.textContent = COUNT; generate(); });
+  fsIn.addEventListener('input', () => {
+    FS = +fsIn.value;
+    fsVal.textContent = FS + ' px';
+    s1Fs = FS;
+    if (activeTab === 'pattern') redraw();
+  });
+  fsVal.textContent = FS + ' px';
   text1In.addEventListener('input', () => { TEXT1 = text1In.value; redraw(); });
   text2In.addEventListener('input', () => { TEXT2 = text2In.value; redraw(); });
 
