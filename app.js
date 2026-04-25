@@ -1858,8 +1858,22 @@
           const lsAttr = el.getAttribute('letter-spacing');
           const ls = lsAttr ? parseFloat(lsAttr) : 0;
           const text = el.textContent || '';
-          const fontPath = INTER_OPENTYPE_FONT.getPath(text, x, y, fs, { letterSpacing: ls / fs });
-          const d = fontPath.toPathData(3);
+          const font = INTER_OPENTYPE_FONT;
+          const scale = fs / font.unitsPerEm;
+          const lsEm = (fs > 0) ? (ls / fs) : 0;
+          const fullPath = new opentype.Path();
+          let cursorX = x;
+          for (const ch of text) {
+            const glyph = font.charToGlyph(ch);
+            if (glyph && glyph.index !== 0) {
+              const glyphPath = glyph.getPath(cursorX, y, fs);
+              fullPath.extend(glyphPath);
+              cursorX += (glyph.advanceWidth || 0) * scale + lsEm * fs;
+            } else {
+              cursorX += fs * 0.5 + lsEm * fs;
+            }
+          }
+          const d = fullPath.toPathData(3);
           const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           newPath.setAttribute('d', d);
           newPath.setAttribute('fill', el.getAttribute('fill') || 'white');
@@ -1938,8 +1952,10 @@
     _interFontLoadPromise = (async () => {
       if (typeof opentype === 'undefined') return null;
       const ttfUrls = [
-        'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/files/inter-cyrillic-600-normal.woff',
         'https://cdn.jsdelivr.net/gh/rsms/inter@v3.19/docs/font-files/Inter-SemiBold.otf',
+        'https://cdn.jsdelivr.net/gh/rsms/inter@v4.0/docs/font-files/Inter-SemiBold.otf',
+        'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/files/inter-cyrillic-600-normal.woff',
+        'https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/files/inter-latin-600-normal.woff',
         'https://rsms.me/inter/font-files/Inter-SemiBold.otf'
       ];
       for (const url of ttfUrls) {
