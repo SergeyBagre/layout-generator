@@ -542,7 +542,7 @@
     const bgRect = document.createElementNS(svgNS, 'rect');
     bgRect.setAttribute('x', 0); bgRect.setAttribute('y', 0);
     bgRect.setAttribute('width', W); bgRect.setAttribute('height', H);
-    bgRect.setAttribute('fill', '#A4BECA');
+    bgRect.setAttribute('fill', '#A2B7C8');
     root.appendChild(bgRect);
 
     if (activeTab === 'pattern') {
@@ -552,7 +552,7 @@
         el.setAttribute('y', s1.y + r * sq);
         el.setAttribute('width', sq);
         el.setAttribute('height', sq);
-        el.setAttribute('fill', '#0098B6');
+        el.setAttribute('fill', '#28AFCA');
         root.appendChild(el);
       });
     }
@@ -565,7 +565,7 @@
         el.setAttribute('y', s1_D.y + r * sqD);
         el.setAttribute('width', sqD);
         el.setAttribute('height', sqD);
-        el.setAttribute('fill', '#0098B6');
+        el.setAttribute('fill', '#28AFCA');
         root.appendChild(el);
       });
     }
@@ -579,7 +579,7 @@
         el.setAttribute('y', s1_L.y + r * sqL);
         el.setAttribute('width', sqL);
         el.setAttribute('height', sqL);
-        el.setAttribute('fill', '#0098B6');
+        el.setAttribute('fill', '#28AFCA');
         root.appendChild(el);
       });
     }
@@ -2014,7 +2014,7 @@
       cnv.width = W;
       cnv.height = H;
       const ctx = cnv.getContext('2d');
-      ctx.fillStyle = '#A4BECA';
+      ctx.fillStyle = '#A2B7C8';
       ctx.fillRect(0, 0, W, H);
       ctx.drawImage(img, 0, 0, W, H);
       cnv.toBlob((blob) => {
